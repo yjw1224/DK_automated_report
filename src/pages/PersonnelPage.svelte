@@ -25,6 +25,8 @@
   let draft: Soldier | null = null;
   // 열외 사유 직접 입력 여부
   let useCustomReason = false;
+  // 저장 시도 여부 (유효성 표시용)
+  let saveAttempted = false;
 
   // ── storage ─────────────────────────────────────────────────────────────────
   function storageKey(): string {
@@ -80,6 +82,12 @@
   // ── 드래프트 저장 ────────────────────────────────────────────────────────────
   function saveDraft() {
     if (selectedIndex === null || !draft) return;
+    saveAttempted = true;
+    // 유효성 검사
+    if (useCustomReason && draft.traits.absence.isAbsent && !draft.traits.absence.customReason.trim()) return;
+    if (draft.traits.vacation.hasVacation && (!draft.traits.vacation.startDate || !draft.traits.vacation.endDate)) return;
+    if (draft.traits.outpatient.hasOutpatient && (!draft.traits.outpatient.date || !draft.traits.outpatient.place.trim())) return;
+    if (draft.traits.visit.hasVisit && (!draft.traits.visit.date || !draft.traits.visit.visitor.trim())) return;
     // 커스텀 사유 모드인데 추가로 reason이 남아 있으면 null 처리
     if (!draft.traits.absence.isAbsent) {
       draft.traits.absence.reason = null;
@@ -111,6 +119,7 @@
     draft = null;
     newName = '';
     useCustomReason = false;
+    saveAttempted = false;
   }
 
   // ── 열외 사유 셀렉트 변경 ─────────────────────────────────────────────────────
@@ -251,7 +260,7 @@
 
       <!-- 특성 1: 열외 여부 -->
       <div class="flex flex-col gap-2.5">
-        <span class="text-xs font-semibold text-slate-600">① 열외 여부</span>
+        <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">열외</span>
 
         <!-- Y / N 토글 -->
         <div class="flex gap-2">
@@ -294,11 +303,207 @@
 
             {#if useCustomReason}
               <input
-                class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+                class="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.absence.customReason.trim()
+                    ? 'border-red-400 bg-red-50 ring-red-400'
+                    : 'border-slate-300 ring-blue-500'}"
                 type="text"
                 placeholder="사유 직접 입력"
                 bind:value={draft.traits.absence.customReason}
               />
+              {#if saveAttempted && !draft.traits.absence.customReason.trim()}
+                <p class="text-xs text-red-500">열외 사유를 입력해 주세요.</p>
+              {/if}
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- 특성: 휴가 -->
+      <div class="flex flex-col gap-2">
+        <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">휴가</span>
+
+        <!-- 있음 / 없음 토글 -->
+        <div class="flex gap-2">
+          <button
+            type="button"
+            on:click={() => { if (draft) draft.traits.vacation.hasVacation = true; }}
+            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+              {draft.traits.vacation.hasVacation
+                ? 'border-blue-400 bg-blue-100 text-blue-700'
+                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          >
+            있음
+          </button>
+          <button
+            type="button"
+            on:click={() => { if (draft) { draft.traits.vacation.hasVacation = false; draft.traits.vacation.startDate = ''; draft.traits.vacation.endDate = ''; } }}
+            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+              {!draft.traits.vacation.hasVacation
+                ? 'border-slate-700 bg-slate-800 text-white'
+                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          >
+            없음
+          </button>
+        </div>
+
+        <!-- 날짜 피커 (있음일 때만) -->
+        {#if draft.traits.vacation.hasVacation}
+          <div class="flex flex-col gap-2 rounded-lg bg-white p-3 border border-slate-200">
+            <div class="flex items-center gap-2">
+              <span class="w-10 shrink-0 text-xs text-slate-500">시작</span>
+              <input
+                type="date"
+                bind:value={draft.traits.vacation.startDate}
+                class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.vacation.startDate
+                    ? 'border-red-400 bg-red-50 ring-red-400'
+                    : 'border-slate-300 ring-blue-500'}"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-10 shrink-0 text-xs text-slate-500">종료</span>
+              <input
+                type="date"
+                bind:value={draft.traits.vacation.endDate}
+                min={draft.traits.vacation.startDate || undefined}
+                class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.vacation.endDate
+                    ? 'border-red-400 bg-red-50 ring-red-400'
+                    : 'border-slate-300 ring-blue-500'}"
+              />
+            </div>
+            {#if saveAttempted && (!draft.traits.vacation.startDate || !draft.traits.vacation.endDate)}
+              <p class="text-xs text-red-500">시작일과 종료일을 모두 선택해 주세요.</p>
+            {/if}
+            {#if draft.traits.vacation.startDate && draft.traits.vacation.endDate}
+              <p class="text-center text-xs text-slate-600">
+                {new Date(draft.traits.vacation.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                ~
+                {new Date(draft.traits.vacation.endDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+              </p>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- 특성: 외진 -->
+      <div class="flex flex-col gap-2">
+        <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">외진</span>
+
+        <!-- Y / N 토글 -->
+        <div class="flex gap-2">
+          <button
+            type="button"
+            on:click={() => { if (draft) draft.traits.outpatient.hasOutpatient = true; }}
+            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+              {draft.traits.outpatient.hasOutpatient
+                ? 'border-blue-400 bg-blue-100 text-blue-700'
+                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          >
+            있음
+          </button>
+          <button
+            type="button"
+            on:click={() => { if (draft) { draft.traits.outpatient.hasOutpatient = false; draft.traits.outpatient.date = ''; draft.traits.outpatient.place = ''; } }}
+            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+              {!draft.traits.outpatient.hasOutpatient
+                ? 'border-slate-700 bg-slate-800 text-white'
+                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          >
+            없음
+          </button>
+        </div>
+
+        <!-- 날짜 + 장소 (있음일 때만) -->
+        {#if draft.traits.outpatient.hasOutpatient}
+          <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+            <div class="flex items-center gap-2">
+              <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
+              <input
+                type="date"
+                bind:value={draft.traits.outpatient.date}
+                class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.outpatient.date
+                    ? 'border-red-400 bg-red-50 ring-red-400'
+                    : 'border-slate-300 ring-blue-500'}"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-10 shrink-0 text-xs text-slate-500">장소</span>
+              <input
+                type="text"
+                placeholder="외진 장소 입력"
+                bind:value={draft.traits.outpatient.place}
+                class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.outpatient.place.trim()
+                    ? 'border-red-400 bg-red-50 ring-red-400'
+                    : 'border-slate-300 ring-blue-500'}"
+              />
+            </div>
+            {#if saveAttempted && (!draft.traits.outpatient.date || !draft.traits.outpatient.place.trim())}
+              <p class="text-xs text-red-500">날짜와 장소를 모두 입력해 주세요.</p>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- 특성: 면회 -->
+      <div class="flex flex-col gap-2">
+        <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">면회</span>
+
+        <!-- Y / N 토글 -->
+        <div class="flex gap-2">
+          <button
+            type="button"
+            on:click={() => { if (draft) draft.traits.visit.hasVisit = true; }}
+            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+              {draft.traits.visit.hasVisit
+                ? 'border-blue-400 bg-blue-100 text-blue-700'
+                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          >
+            있음
+          </button>
+          <button
+            type="button"
+            on:click={() => { if (draft) { draft.traits.visit.hasVisit = false; draft.traits.visit.date = ''; draft.traits.visit.visitor = ''; } }}
+            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+              {!draft.traits.visit.hasVisit
+                ? 'border-slate-700 bg-slate-800 text-white'
+                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          >
+            없음
+          </button>
+        </div>
+
+        <!-- 날짜 + 면회자 (있음일 때만) -->
+        {#if draft.traits.visit.hasVisit}
+          <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+            <div class="flex items-center gap-2">
+              <span class="w-12 shrink-0 text-xs text-slate-500">날짜</span>
+              <input
+                type="date"
+                bind:value={draft.traits.visit.date}
+                class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.visit.date
+                    ? 'border-red-400 bg-red-50 ring-red-400'
+                    : 'border-slate-300 ring-blue-500'}"
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-12 shrink-0 text-xs text-slate-500">면회자</span>
+              <input
+                type="text"
+                placeholder="면회자 이름 입력"
+                bind:value={draft.traits.visit.visitor}
+                class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.visit.visitor.trim()
+                    ? 'border-red-400 bg-red-50 ring-red-400'
+                    : 'border-slate-300 ring-blue-500'}"
+              />
+            </div>
+            {#if saveAttempted && (!draft.traits.visit.date || !draft.traits.visit.visitor.trim())}
+              <p class="text-xs text-red-500">날짜와 면회자를 모두 입력해 주세요.</p>
             {/if}
           </div>
         {/if}
