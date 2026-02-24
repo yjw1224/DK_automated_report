@@ -2,7 +2,11 @@
 export default {
   content: ['./index.html', './src/**/*.{js,ts,svelte}'],
   theme: {
-    extend: {}
+    extend: {
+      fontFamily: {
+        sans: ['Pretendard Variable', 'Pretendard', 'Noto Sans KR', 'system-ui', '-apple-system', 'sans-serif']
+      }
+    }
   },
   plugins: []
 };

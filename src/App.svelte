@@ -110,6 +110,11 @@
   function goHome() {
     window.location.hash = '#/';
   }
+
+  const CLS_INPUT    = 'rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2';
+  const CLS_LABEL    = 'flex flex-col gap-2 text-sm font-medium';
+  const CLS_NAV_BTN  = 'rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100';
+  const CLS_BACK_BTN = `w-full bg-white ${CLS_NAV_BTN}`;
 </script>
 
 <main class="min-h-screen bg-slate-50 p-6 text-slate-900">
@@ -121,12 +126,12 @@
       </header>
 
       <div class="grid gap-4 sm:grid-cols-3">
-        <label class="flex flex-col gap-2 text-sm font-medium">
+        <label class={CLS_LABEL}>
           포대
           <select
             value={battery}
             on:change={onBatteryChange}
-            class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+            class={CLS_INPUT}
           >
             {#each BATTERY_OPTIONS as value}
               <option value={value}>{`${value}포대`}</option>
@@ -134,12 +139,12 @@
           </select>
         </label>
 
-        <label class="flex flex-col gap-2 text-sm font-medium">
+        <label class={CLS_LABEL}>
           생활관
           <select
             value={room}
             on:change={onRoomChange}
-            class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+            class={CLS_INPUT}
           >
             {#each ROOM_OPTIONS as value}
               <option value={value}>{value}생활관</option>
@@ -147,37 +152,25 @@
           </select>
         </label>
 
-        <label class="flex flex-col gap-2 text-sm font-medium">
+        <label class={CLS_LABEL}>
           보고 날짜
           <input
             bind:value={reportDate}
             on:change={saveMainForm}
-            class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+            class={CLS_INPUT}
             type="date"
           />
         </label>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-3">
-        <button
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-          type="button"
-          on:click={() => goTo('personnel')}
-        >
+        <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('personnel')}>
           생활관 인원 관리
         </button>
-        <button
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-          type="button"
-          on:click={() => goTo('message')}
-        >
+        <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('message')}>
           대표병 카톡 생성
         </button>
-        <button
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-          type="button"
-          on:click={() => goTo('load')}
-        >
+        <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('load')}>
           불러오기
         </button>
       </div>
@@ -185,35 +178,17 @@
   {:else if currentRoute === 'personnel'}
     <PersonnelPage {battery} {room} {reportDate} />
     <div class="mx-auto mt-4 w-full max-w-3xl">
-      <button
-        class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-        type="button"
-        on:click={goHome}
-      >
-        메인으로 돌아가기
-      </button>
+      <button class={CLS_BACK_BTN} type="button" on:click={goHome}>메인으로 돌아가기</button>
     </div>
   {:else if currentRoute === 'message'}
     <MessagePage {battery} {room} {reportDate} />
     <div class="mx-auto mt-4 w-full max-w-3xl">
-      <button
-        class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-        type="button"
-        on:click={goHome}
-      >
-        메인으로 돌아가기
-      </button>
+      <button class={CLS_BACK_BTN} type="button" on:click={goHome}>메인으로 돌아가기</button>
     </div>
   {:else if currentRoute === 'load'}
     <LoadPage {battery} {room} {reportDate} />
     <div class="mx-auto mt-4 w-full max-w-3xl">
-      <button
-        class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-        type="button"
-        on:click={goHome}
-      >
-        메인으로 돌아가기
-      </button>
+      <button class={CLS_BACK_BTN} type="button" on:click={goHome}>메인으로 돌아가기</button>
     </div>
   {/if}
 </main>
