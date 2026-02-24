@@ -98,6 +98,7 @@
   // ── 인원 삭제 ───────────────────────────────────────────────────────────────
   function removeSlot() {
     if (selectedIndex === null) return;
+    if (!confirm(`${slots[selectedIndex]?.name ?? '이 인원'}을(를) 삭제할까요?`)) return;
     slots[selectedIndex] = null;
     slots = [...slots];
     persist();
