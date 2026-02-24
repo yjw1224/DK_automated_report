@@ -1,9 +1,3 @@
-/** @type {import('svelte/compiler').CompileOptions} */
-const config = {
-	compilerOptions: {
-		hydratable: false
-	}
-};
+const config = {};
 
 export default config;
-
