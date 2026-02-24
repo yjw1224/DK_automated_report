@@ -281,7 +281,7 @@
           <div class="flex flex-col gap-2">
             <span class="text-xs text-slate-500">열외 사유</span>
             <select
-              value={useCustomReason ? '__custom__' : (draft.traits.absence.reason ?? '')}
+              value={useCustomReason ? '__custom__' : (draft.traits.absence.reason ?? ABSENCE_PRESET_REASONS[0])}
               on:change={onAbsenceReasonChange}
               class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
             >
