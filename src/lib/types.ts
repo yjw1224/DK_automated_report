@@ -116,3 +116,13 @@ export interface Soldier {
 }
 
 export type Slot = Soldier | null;
+
+/** 계급 우선순위 인덱스 (병장=0 → 이병=3). 낮을수록 높은 계급. */
+export function rankIndex(rank: Rank): number {
+  return RANKS.indexOf(rank);
+}
+
+/** Soldier 배열을 계급순(병장→이병)으로 정렬한 새 배열 반환 */
+export function sortByRank<T extends { rank: Rank }>(arr: T[]): T[] {
+  return [...arr].sort((a, b) => rankIndex(a.rank) - rankIndex(b.rank));
+}

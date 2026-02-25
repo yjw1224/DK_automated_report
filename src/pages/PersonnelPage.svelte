@@ -13,7 +13,8 @@
     type Rank,
     type Religion,
     type Slot,
-    type Soldier
+    type Soldier,
+    sortByRank
   } from '../lib/types';
   import {
     CLS_CHIP,
@@ -27,6 +28,7 @@
     CLS_SEC_TITLE,
     CLS_TOGGLE
   } from '../lib/styles';
+  import MessagePreview from '../components/MessagePreview.svelte';
 
   export let battery: string;
   export let room: string;
@@ -52,6 +54,9 @@
   let useCustomReason = false;
   // 저장 시도 여부 (유효성 표시용)
   let saveAttempted = false;
+
+  // 메시지 미리보기 모달
+  let showMessagePreview = false;
 
   // ── 단체 설정 ────────────────────────────────────────────────────────────────
   let civHaircut: { enabled: boolean; members: string[] } = { enabled: false, members: [] };
@@ -268,7 +273,7 @@
   }
 
   // ── 반응형 집계 ─────────────────────────────────────────────────────────────
-  $: soldiers = slots.filter((s): s is NonNullable<typeof s> => s !== null);
+  $: soldiers = sortByRank(slots.filter((s): s is NonNullable<typeof s> => s !== null));
   $: total = soldiers.length;
   $: absentSoldiers = soldiers.filter((s) => s.traits.absence.isAbsent);
   $: absentCount = absentSoldiers.length;
@@ -281,6 +286,11 @@
     }
     return [...map.entries()].map(([label, count]) => `${label} ${count}`);
   })();
+
+  // 배달 주문 날짜순 정렬 (원본 인덱스 유지)
+  $: sortedDeliveryOrders = deliveryOrders
+    .map((order, idx) => ({ order, idx }))
+    .sort((a, b) => (a.order.date < b.order.date ? -1 : a.order.date > b.order.date ? 1 : a.idx - b.idx));
 
   onMount(load);
 </script>
@@ -799,13 +809,13 @@
 
       {#if deliveryEnabled}
         <div class="flex flex-col gap-3">
-          {#each deliveryOrders as order, idx}
+          {#each sortedDeliveryOrders as { order, idx: origIdx }}
             <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">주문 {idx + 1}</span>
+                <span class="text-xs font-semibold text-slate-500">주문 {origIdx + 1}</span>
                 <button
                   type="button"
-                  on:click={() => removeDeliveryOrder(idx)}
+                  on:click={() => removeDeliveryOrder(origIdx)}
                   class="text-xs font-semibold text-red-400 hover:text-red-600"
                 >
                   삭제
@@ -840,7 +850,7 @@
                     {#each soldiers as soldier}
                       <button
                         type="button"
-                        on:click={() => toggleDeliveryMember(idx, soldier.name)}
+                        on:click={() => toggleDeliveryMember(origIdx, soldier.name)}
                         class="{CLS_CHIP} {order.members.includes(soldier.name) ? CLS_ON_BLUE : CLS_OFF}"
                       >
                         {soldier.name}
@@ -862,4 +872,27 @@
       {/if}
     </div>
   </div>
+
+  <!-- ── 메시지 생성하기 버튼 ── -->
+  <button
+    type="button"
+    on:click={() => (showMessagePreview = true)}
+    class="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-bold text-white shadow-sm transition-colors hover:bg-blue-500 active:bg-blue-700"
+  >
+    📋 메시지 생성하기
+  </button>
 </section>
+
+<MessagePreview
+  bind:visible={showMessagePreview}
+  {battery}
+  {room}
+  {reportDate}
+  {slots}
+  {civHaircut}
+  {religion}
+  {milTrainingEnabled}
+  {milTraining}
+  {deliveryEnabled}
+  {deliveryOrders}
+/>
