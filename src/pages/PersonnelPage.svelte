@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import {
     ABSENCE_PRESET_REASONS,
     defaultTraits,
@@ -15,11 +15,16 @@
 
   const SLOT_COUNT = 10;
 
+  /**
+   * 인원 슬롯 배열: 2열 × 5행 = 최대 10명
+   * 각 슬롯은 Soldier 객체이거나 null (빈 자리)
+   */
   let slots: Slot[] = Array(SLOT_COUNT).fill(null);
   let selectedIndex: number | null = null;
 
   // 빈 자리용 - 신규 이름 입력
   let newName = '';
+  let nameInputEl: HTMLInputElement | null = null;
 
   // 채워진 자리용 - 드래프트 (저장 전 임시 편집값)
   let draft: Soldier | null = null;
@@ -28,9 +33,29 @@
   // 저장 시도 여부 (유효성 표시용)
   let saveAttempted = false;
 
+  // ── 단체 설정 ────────────────────────────────────────────────────────────────
+  let civHaircut: { enabled: boolean; members: string[] } = { enabled: false, members: [] };
+
+  const RELIGIONS = ['기독교', '천주교', '불교'] as const;
+  type Religion = typeof RELIGIONS[number];
+  let religion: Record<Religion, string[]> = { '기독교': [], '천주교': [], '불교': [] };
+
+  const MIL_TRAININGS = ['사격', '체력 측정', 'TCCC', '화생방', '정신전력'] as const;
+  type MilTraining = typeof MIL_TRAININGS[number];
+  let milTrainingEnabled = false;
+  let milTraining: Record<MilTraining, string[]> = { '사격': [], '체력 측정': [], 'TCCC': [], '화생방': [], '정신전력': [] };
+
+  type DeliveryOrder = { date: string; type: string; members: string[] };
+  let deliveryEnabled = false;
+  let deliveryOrders: DeliveryOrder[] = [];
+
   // ── storage ─────────────────────────────────────────────────────────────────
   function storageKey(): string {
     return `dk-personnel-${battery}-${room}`;
+  }
+
+  function groupStorageKey(): string {
+    return `dk-group-${battery}-${room}`;
   }
 
   function load() {
@@ -44,14 +69,91 @@
     } catch {
       // 파싱 실패 시 기본값 유지
     }
+    const rawGroup = localStorage.getItem(groupStorageKey());
+    if (rawGroup) {
+      try {
+        const parsedGroup = JSON.parse(rawGroup);
+        if (parsedGroup?.civHaircut) civHaircut = parsedGroup.civHaircut;
+        if (parsedGroup?.religion) religion = parsedGroup.religion;
+        if (parsedGroup?.milTrainingEnabled !== undefined) milTrainingEnabled = parsedGroup.milTrainingEnabled;
+        if (parsedGroup?.milTraining) milTraining = parsedGroup.milTraining;
+        if (parsedGroup?.deliveryEnabled !== undefined) deliveryEnabled = parsedGroup.deliveryEnabled;
+        if (parsedGroup?.deliveryOrders) deliveryOrders = parsedGroup.deliveryOrders;
+      } catch {
+        // 파싱 실패 시 기본값 유지
+      }
+    }
   }
 
   function persist() {
     localStorage.setItem(storageKey(), JSON.stringify(slots));
   }
 
+  function persistGroup() {
+    localStorage.setItem(groupStorageKey(), JSON.stringify({ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders }));
+  }
+
+  function toggleCivHaircutMember(name: string) {
+    if (civHaircut.members.includes(name)) {
+      civHaircut.members = civHaircut.members.filter((n) => n !== name);
+    } else {
+      civHaircut.members = [...civHaircut.members, name];
+    }
+    persistGroup();
+  }
+
+  function toggleReligionMember(rel: Religion, name: string) {
+    const inThis = religion[rel].includes(name);
+    // 모든 종교에서 먼저 제거 (한 명당 최대 하나)
+    for (const r of RELIGIONS) {
+      religion[r] = religion[r].filter((n) => n !== name);
+    }
+    // 다른 종교에 있었거나, 같은 종교를 재클릭하지 않은 경우 추가
+    if (!inThis) {
+      religion[rel] = [...religion[rel], name];
+    }
+    religion = { ...religion };
+    persistGroup();
+  }
+
+  function toggleMilTrainingMember(cat: MilTraining, name: string) {
+    if (milTraining[cat].includes(name)) {
+      milTraining[cat] = milTraining[cat].filter((n) => n !== name);
+    } else {
+      milTraining[cat] = [...milTraining[cat], name];
+    }
+    milTraining = { ...milTraining };
+    persistGroup();
+  }
+
+  function addDeliveryOrder() {
+    deliveryOrders = [...deliveryOrders, { date: reportDate, type: '', members: [] }];
+    persistGroup();
+  }
+
+  function removeDeliveryOrder(idx: number) {
+    deliveryOrders = deliveryOrders.filter((_, i) => i !== idx);
+    persistGroup();
+  }
+
+  function toggleDeliveryMember(idx: number, name: string) {
+    const order = deliveryOrders[idx];
+    if (order.members.includes(name)) {
+      order.members = order.members.filter((n) => n !== name);
+    } else {
+      order.members = [...order.members, name];
+    }
+    deliveryOrders = [...deliveryOrders];
+    persistGroup();
+  }
+
   // ── slot 선택 ───────────────────────────────────────────────────────────────
-  function selectSlot(index: number) {
+  async function selectSlot(index: number) {
+    // 이미 선택된 자리 재클릭 시 토글(닫기)
+    if (selectedIndex === index) {
+      cancel();
+      return;
+    }
     selectedIndex = index;
     const slot = slots[index];
     if (slot) {
@@ -62,6 +164,9 @@
       // 빈 자리: 이름 입력 초기화
       draft = null;
       newName = '';
+      // DOM 업데이트 후 input에 포커스
+      await tick();
+      nameInputEl?.focus();
     }
   }
 
@@ -215,6 +320,7 @@
         신규 인원 추가 — {selectedIndex + 1}번 자리
       </p>
       <input
+        bind:this={nameInputEl}
         class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
         type="text"
         placeholder="이름 입력"
@@ -535,4 +641,235 @@
       </div>
     </div>
   {/if}
+
+  <!-- ── 단체 설정 ── -->
+  <div class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">단체 설정</p>
+
+    <!-- 민간 이발 -->
+    <div class="flex flex-col gap-2">
+      <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">민간 이발</span>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          on:click={() => { civHaircut.enabled = true; persistGroup(); }}
+          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+            {civHaircut.enabled
+              ? 'border-blue-400 bg-blue-100 text-blue-700'
+              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+        >
+          있음
+        </button>
+        <button
+          type="button"
+          on:click={() => { civHaircut.enabled = false; civHaircut.members = []; persistGroup(); }}
+          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+            {!civHaircut.enabled
+              ? 'border-slate-700 bg-slate-800 text-white'
+              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+        >
+          없음
+        </button>
+      </div>
+
+      {#if civHaircut.enabled}
+        <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+          <span class="text-xs text-slate-500">해당 인원 선택 (중복 가능)</span>
+          {#if soldiers.length === 0}
+            <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
+          {:else}
+            <div class="flex flex-wrap gap-2">
+              {#each soldiers as soldier}
+                <button
+                  type="button"
+                  on:click={() => toggleCivHaircutMember(soldier.name)}
+                  class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+                    {civHaircut.members.includes(soldier.name)
+                      ? 'border-blue-400 bg-blue-100 text-blue-700'
+                      : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+                >
+                  {soldier.name}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </div>
+
+    <!-- 종교 -->
+    <div class="flex flex-col gap-2">
+      <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">종교</span>
+      {#if soldiers.length === 0}
+        <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
+      {:else}
+        {#each RELIGIONS as rel}
+          <div class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
+            <span class="text-xs font-semibold text-slate-500">{rel}</span>
+            <div class="flex flex-wrap gap-2">
+              {#each soldiers as soldier}
+                {@const assigned = RELIGIONS.find((r) => religion[r].includes(soldier.name))}
+                <button
+                  type="button"
+                  on:click={() => toggleReligionMember(rel, soldier.name)}
+                  class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+                    {religion[rel].includes(soldier.name)
+                      ? 'border-blue-400 bg-blue-100 text-blue-700'
+                      : assigned
+                        ? 'border-slate-200 bg-slate-100 text-slate-300'
+                        : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+                >
+                  {soldier.name}
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      {/if}
+    </div>
+    <!-- 병기본 -->
+    <div class="flex flex-col gap-2">
+      <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">병기본</span>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          on:click={() => { milTrainingEnabled = true; persistGroup(); }}
+          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+            {milTrainingEnabled
+              ? 'border-blue-400 bg-blue-100 text-blue-700'
+              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+        >
+          있음
+        </button>
+        <button
+          type="button"
+          on:click={() => { milTrainingEnabled = false; for (const c of MIL_TRAININGS) milTraining[c] = []; milTraining = { ...milTraining }; persistGroup(); }}
+          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+            {!milTrainingEnabled
+              ? 'border-slate-700 bg-slate-800 text-white'
+              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+        >
+          없음
+        </button>
+      </div>
+
+      {#if milTrainingEnabled}
+        {#if soldiers.length === 0}
+          <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
+        {:else}
+          {#each MIL_TRAININGS as cat}
+            <div class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
+              <span class="text-xs font-semibold text-slate-500">{cat}</span>
+              <div class="flex flex-wrap gap-2">
+                {#each soldiers as soldier}
+                  <button
+                    type="button"
+                    on:click={() => toggleMilTrainingMember(cat, soldier.name)}
+                    class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+                      {milTraining[cat].includes(soldier.name)
+                        ? 'border-blue-400 bg-blue-100 text-blue-700'
+                        : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+                  >
+                    {soldier.name}
+                  </button>
+                {/each}
+              </div>
+            </div>
+          {/each}
+        {/if}
+      {/if}
+    </div>
+    <!-- 배달 음식 -->
+    <div class="flex flex-col gap-2">
+      <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">배달 음식</span>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          on:click={() => { deliveryEnabled = true; if (deliveryOrders.length === 0) deliveryOrders = [{ date: reportDate, type: '', members: [] }]; persistGroup(); }}
+          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+            {deliveryEnabled
+              ? 'border-blue-400 bg-blue-100 text-blue-700'
+              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+        >
+          있음
+        </button>
+        <button
+          type="button"
+          on:click={() => { deliveryEnabled = false; deliveryOrders = []; persistGroup(); }}
+          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+            {!deliveryEnabled
+              ? 'border-slate-700 bg-slate-800 text-white'
+              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+        >
+          없음
+        </button>
+      </div>
+
+      {#if deliveryEnabled}
+        <div class="flex flex-col gap-3">
+          {#each deliveryOrders as order, idx}
+            <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">주문 {idx + 1}</span>
+                <button
+                  type="button"
+                  on:click={() => removeDeliveryOrder(idx)}
+                  class="text-xs font-semibold text-red-400 hover:text-red-600"
+                >
+                  삭제
+                </button>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
+                <input
+                  type="date"
+                  bind:value={order.date}
+                  on:change={() => persistGroup()}
+                  class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">종류</span>
+                <input
+                  type="text"
+                  placeholder="음식 종류 입력"
+                  bind:value={order.type}
+                  on:input={() => persistGroup()}
+                  class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
+                />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <span class="text-xs text-slate-500">인원 선택 (중복 가능)</span>
+                {#if soldiers.length === 0}
+                  <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
+                {:else}
+                  <div class="flex flex-wrap gap-2">
+                    {#each soldiers as soldier}
+                      <button
+                        type="button"
+                        on:click={() => toggleDeliveryMember(idx, soldier.name)}
+                        class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
+                          {order.members.includes(soldier.name)
+                            ? 'border-blue-400 bg-blue-100 text-blue-700'
+                            : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+                      >
+                        {soldier.name}
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/each}
+          <button
+            type="button"
+            on:click={addDeliveryOrder}
+            class="rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50"
+          >
+            + 주문 추가
+          </button>
+        </div>
+      {/if}
+    </div>
+  </div>
 </section>
