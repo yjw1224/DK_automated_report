@@ -2,12 +2,16 @@
   import { onMount, tick } from 'svelte';
   import {
     ABSENCE_PRESET_REASONS,
+    LEAVE_TYPES,
     MIL_TRAININGS,
     RANKS,
     RELIGIONS,
+    defaultLeaveEntry,
     defaultTraits,
     type AbsencePresetReason,
     type DeliveryOrder,
+    type LeaveEntry,
+    type LeaveType,
     type MilTraining,
     type PersonnelTraits,
     type Rank,
@@ -192,7 +196,15 @@
   // ── 유효성 검사 ──────────────────────────────────────────────────────────────
   function isDraftValid(d: Soldier): boolean {
     if (useCustomReason && d.traits.absence.isAbsent && !d.traits.absence.customReason.trim()) return false;
-    if (d.traits.vacation.hasVacation && (!d.traits.vacation.startDate || !d.traits.vacation.endDate)) return false;
+    for (const l of d.traits.leaves) {
+      if (l.type === '휴가') {
+        if (!l.startDate || !l.endDate) return false;
+        if (l.startDate >= l.endDate) return false;
+      } else {
+        // 평일외출 / 주말외출 / 외박: 날짜만 필요
+        if (!l.startDate) return false;
+      }
+    }
     if (d.traits.outpatient.hasOutpatient && (!d.traits.outpatient.date || !d.traits.outpatient.place.trim())) return false;
     if (d.traits.visit.hasVisit && (!d.traits.visit.date || !d.traits.visit.visitor.trim())) return false;
     return true;
@@ -461,66 +473,134 @@
         {/if}
       </div>
 
-      <!-- 특성: 휴가 -->
+      <!-- 특성: 출타 -->
       <div class="flex flex-col gap-2">
-        <span class={CLS_SEC_TITLE}>휴가</span>
-
-        <!-- 있음 / 없음 토글 -->
-        <div class="flex gap-2">
+        <div class="flex items-center justify-between">
+          <span class={CLS_SEC_TITLE}>출타</span>
           <button
             type="button"
-            on:click={() => { if (draft) draft.traits.vacation.hasVacation = true; }}
-            class="{CLS_TOGGLE} {draft.traits.vacation.hasVacation ? CLS_ON_BLUE : CLS_OFF}"
+            on:click={() => { if (draft) { draft.traits.leaves = [...draft.traits.leaves, defaultLeaveEntry()]; draft = draft; } }}
+            class="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-500"
           >
-            있음
-          </button>
-          <button
-            type="button"
-            on:click={() => { if (draft) { draft.traits.vacation.hasVacation = false; draft.traits.vacation.startDate = ''; draft.traits.vacation.endDate = ''; } }}
-            class="{CLS_TOGGLE} {!draft.traits.vacation.hasVacation ? CLS_ON_DARK : CLS_OFF}"
-          >
-            없음
+            + 추가
           </button>
         </div>
 
-        <!-- 날짜 피커 (있음일 때만) -->
-        {#if draft.traits.vacation.hasVacation}
+        {#if draft.traits.leaves.length === 0}
+          <p class="text-xs text-slate-400">등록된 출타 일정이 없습니다.</p>
+        {/if}
+
+        {#each draft.traits.leaves as entry, li (li)}
           <div class="flex flex-col gap-2 rounded-lg bg-white p-3 border border-slate-200">
-            <div class="flex items-center gap-2">
-              <span class="w-10 shrink-0 text-xs text-slate-500">시작</span>
-              <input
-                type="date"
-                bind:value={draft.traits.vacation.startDate}
-                class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
-                  {saveAttempted && !draft.traits.vacation.startDate
-                    ? CLS_FIELD_ERR
-                    : CLS_FIELD_OK}"
-              />
+            <!-- 헤더: 번호 + 삭제 -->
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500">출타 {li + 1}</span>
+              <button
+                type="button"
+                on:click={() => { if (draft) { draft.traits.leaves = draft.traits.leaves.filter((_, idx) => idx !== li); draft = draft; } }}
+                class="text-xs text-red-500 hover:text-red-700"
+              >
+                삭제
+              </button>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="w-10 shrink-0 text-xs text-slate-500">종료</span>
-              <input
-                type="date"
-                bind:value={draft.traits.vacation.endDate}
-                min={draft.traits.vacation.startDate || undefined}
-                class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
-                  {saveAttempted && !draft.traits.vacation.endDate
-                    ? CLS_FIELD_ERR
-                    : CLS_FIELD_OK}"
-              />
+
+            <!-- 출타 종류 선택 -->
+            <div class="flex flex-wrap gap-2">
+              {#each LEAVE_TYPES as lt}
+                <button
+                  type="button"
+                  on:click={() => { entry.type = lt; entry.startDate = ''; entry.endDate = ''; draft = draft; }}
+                  class="{CLS_CHIP} {entry.type === lt ? CLS_ON_BLUE : CLS_OFF}"
+                >
+                  {lt}
+                </button>
+              {/each}
             </div>
-            {#if saveAttempted && (!draft.traits.vacation.startDate || !draft.traits.vacation.endDate)}
-              <p class="text-xs text-red-500">시작일과 종료일을 모두 선택해 주세요.</p>
-            {/if}
-            {#if draft.traits.vacation.startDate && draft.traits.vacation.endDate}
-              <p class="text-center text-xs text-slate-600">
-                {new Date(draft.traits.vacation.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
-                ~
-                {new Date(draft.traits.vacation.endDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
-              </p>
+
+            <!-- 휴가: 시작일 + 종료일 -->
+            {#if entry.type === '휴가'}
+              <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">시작</span>
+                <input
+                  type="date"
+                  bind:value={entry.startDate}
+                  on:change={() => { draft = draft; }}
+                  class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                    {saveAttempted && !entry.startDate ? CLS_FIELD_ERR : CLS_FIELD_OK}"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">종료</span>
+                <input
+                  type="date"
+                  bind:value={entry.endDate}
+                  min={entry.startDate ? (() => { const d = new Date(entry.startDate + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })() : undefined}
+                  on:change={() => { draft = draft; }}
+                  class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                    {saveAttempted && (!entry.endDate || (entry.startDate && entry.startDate >= entry.endDate)) ? CLS_FIELD_ERR : CLS_FIELD_OK}"
+                />
+              </div>
+              {#if saveAttempted && (!entry.startDate || !entry.endDate || entry.startDate >= entry.endDate)}
+                <p class="text-xs text-red-500">{entry.startDate && entry.endDate && entry.startDate >= entry.endDate ? '종료일은 시작일 다음 날부터 선택해 주세요.' : '시작일과 종료일을 모두 선택해 주세요.'}</p>
+              {/if}
+              {#if entry.startDate && entry.endDate}
+                {@const nights = Math.round((new Date(entry.endDate + 'T00:00:00').getTime() - new Date(entry.startDate + 'T00:00:00').getTime()) / 86400000)}
+                <p class="text-center text-xs text-slate-600">
+                  {new Date(entry.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  ~
+                  {new Date(entry.endDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  ({nights}박 {nights + 1}일)
+                </p>
+              {/if}
+
+            <!-- 외박: 시작일만 (종료일 = 다음 날 자동) -->
+            {:else if entry.type === '외박'}
+              <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
+                <input
+                  type="date"
+                  bind:value={entry.startDate}
+                  on:change={() => { draft = draft; }}
+                  class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                    {saveAttempted && !entry.startDate ? CLS_FIELD_ERR : CLS_FIELD_OK}"
+                />
+              </div>
+              {#if saveAttempted && !entry.startDate}
+                <p class="text-xs text-red-500">날짜를 선택해 주세요.</p>
+              {/if}
+              {#if entry.startDate}
+                {@const nextDay = new Date(new Date(entry.startDate + 'T00:00:00').getTime() + 86400000)}
+                <p class="text-center text-xs text-slate-600">
+                  {new Date(entry.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  ~
+                  {nextDay.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  (1박 2일)
+                </p>
+              {/if}
+
+            <!-- 평일외출 / 주말외출: 날짜만 -->
+            {:else}
+              <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
+                <input
+                  type="date"
+                  bind:value={entry.startDate}
+                  on:change={() => { draft = draft; }}
+                  class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                    {saveAttempted && !entry.startDate ? CLS_FIELD_ERR : CLS_FIELD_OK}"
+                />
+              </div>
+              {#if saveAttempted && !entry.startDate}
+                <p class="text-xs text-red-500">날짜를 선택해 주세요.</p>
+              {/if}
+              {#if entry.startDate}
+                <p class="text-center text-xs text-slate-600">
+                  {new Date(entry.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                </p>
+              {/if}
             {/if}
           </div>
-        {/if}
+        {/each}
       </div>
 
       <!-- 특성: 외진 -->

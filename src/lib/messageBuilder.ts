@@ -22,6 +22,16 @@ export interface MessageContext {
 
 // ─── 상수 ──────────────────────────────────────────────────────────────────────
 
+const SECTION_ICONS: Record<string, string> = {
+  '출타':     '🏠',
+  '종교':     '⛪️',
+  '외진':     '🏥',
+  '면회':     '👥',
+  '민간이발': '💈',
+  '병기본':   '⬆️',
+  '배달 음식':'🍜',
+};
+
 const MIL_CONFIG: Record<MilTraining, { icon: string; label: string }> = {
   '사격':     { icon: '🔫', label: '사격' },
   'TCCC':     { icon: '🚑', label: 'TCCC' },
@@ -137,21 +147,61 @@ function buildHeader(ctx: BuildCtx): string[] {
   return lines;
 }
 
-function buildVacation(ctx: BuildCtx): string[] {
-  const list = ctx.soldiers
-    .filter((s) => s.traits.vacation.hasVacation && s.traits.vacation.startDate && s.traits.vacation.endDate)
-    .sort(byDateThenRank((s) => s.traits.vacation.startDate));
+/** 출타 항목의 종료일 계산 (외박은 시작일+1, 외출은 당일) */
+function leaveEndDate(e: { type: string; startDate: string; endDate: string }): Date {
+  if (e.type === '휴가') return toDate(e.endDate || e.startDate);
+  if (e.type === '외박') {
+    const d = toDate(e.startDate);
+    d.setDate(d.getDate() + 1);
+    return d;
+  }
+  // 평일외출 / 주말외출: 당일 종료
+  return toDate(e.startDate);
+}
 
-  const lines = ['', '🏠 출타 ', ''];
-  if (list.length === 0) return [...lines, '-'];
+function buildLeave(ctx: BuildCtx): string[] {
+  // 모든 병사의 출타 항목을 (soldier, entry) 쌍으로 풀어냄
+  const items: { soldier: Soldier; entry: { type: string; startDate: string; endDate: string } }[] = [];
+  for (const s of ctx.soldiers) {
+    for (const e of s.traits.leaves) {
+      if (!e.startDate) continue;
+      // 종료일이 오늘 이전이면 메시지에서 제외
+      if (leaveEndDate(e) < ctx.today) continue;
+      items.push({ soldier: s, entry: e });
+    }
+  }
+  // 시작일 우선, 같으면 계급순
+  items.sort((a, b) => {
+    if (a.entry.startDate !== b.entry.startDate) return a.entry.startDate < b.entry.startDate ? -1 : 1;
+    return rankIndex(a.soldier.rank) - rankIndex(b.soldier.rank);
+  });
 
-  for (const s of list) {
-    const start = shortDate(s.traits.vacation.startDate);
-    const end = shortDate(s.traits.vacation.endDate);
-    const startD = toDate(s.traits.vacation.startDate);
-    const endD = toDate(s.traits.vacation.endDate);
-    const suffix = startD <= ctx.today && ctx.today <= endD ? '중입니다.' : '예정입니다.';
-    lines.push(`${start}~${end} ${s.rank} ${s.name} 휴가 ${suffix}`);
+  const lines = ['', `${SECTION_ICONS['출타']} 출타 `, ''];
+  if (items.length === 0) return [...lines, '-'];
+
+  for (const { soldier: s, entry: l } of items) {
+    if (l.type === '휴가') {
+      if (!l.endDate) continue;
+      const start = shortDate(l.startDate);
+      const end = shortDate(l.endDate);
+      const startD = toDate(l.startDate);
+      const endD = toDate(l.endDate);
+      const suffix = startD <= ctx.today && ctx.today <= endD ? '중입니다.' : '예정입니다.';
+      lines.push(`${start}~${end} ${s.rank} ${s.name} 휴가 ${suffix}`);
+    } else if (l.type === '외박') {
+      const startD = toDate(l.startDate);
+      const endD = new Date(startD);
+      endD.setDate(endD.getDate() + 1);
+      const start = shortDate(l.startDate);
+      const end = `${endD.getMonth() + 1}/${endD.getDate()}`;
+      const suffix = startD <= ctx.today && ctx.today <= endD ? '중입니다.' : '예정입니다.';
+      lines.push(`${start}~${end} ${s.rank} ${s.name} 외박 ${suffix}`);
+    } else {
+      const d = shortDate(l.startDate);
+      const dateD = toDate(l.startDate);
+      const suffix = dateD <= ctx.today ? '중입니다.' : '예정입니다.';
+      lines.push(`${d} ${s.rank} ${s.name} ${l.type} ${suffix}`);
+    }
   }
   return lines;
 }
@@ -161,7 +211,7 @@ function buildReligion(ctx: BuildCtx): string[] {
   const active = RELIGIONS.filter((r) => resolve(ctx.group.religion[r], ctx).length > 0);
   if (active.length === 0) return lines;
 
-  lines.push('', '⛪️ 종교');
+  lines.push('', `${SECTION_ICONS['종교']} 종교`);
   for (const rel of active) {
     const members = resolve(ctx.group.religion[rel], ctx);
     lines.push('', `${RELIGION_ICON[rel]} ${rel}`, `${formatMembers(members)} 희망합니다.`);
@@ -172,9 +222,10 @@ function buildReligion(ctx: BuildCtx): string[] {
 function buildOutpatient(ctx: BuildCtx): string[] {
   const list = ctx.soldiers
     .filter((s) => s.traits.outpatient.hasOutpatient && s.traits.outpatient.date)
+    .filter((s) => toDate(s.traits.outpatient.date) >= ctx.today)
     .sort(byDateThenRank((s) => s.traits.outpatient.date));
 
-  const lines = ['', '🏥 외진', ''];
+  const lines = ['', `${SECTION_ICONS['외진']} 외진`, ''];
   if (list.length === 0) return [...lines, '-'];
 
   for (const s of list) {
@@ -188,11 +239,12 @@ function buildOutpatient(ctx: BuildCtx): string[] {
 function buildVisit(ctx: BuildCtx): string[] {
   const list = ctx.soldiers
     .filter((s) => s.traits.visit.hasVisit && s.traits.visit.date && s.traits.visit.visitor)
+    .filter((s) => toDate(s.traits.visit.date) >= ctx.today)
     .sort(byDateThenRank((s) => s.traits.visit.date));
 
   if (list.length === 0) return [];
 
-  return ['', ...list.map((s) => {
+  return ['', `${SECTION_ICONS['면회']} 면회`, '', ...list.map((s) => {
     const d = shortDate(s.traits.visit.date);
     return `${d} ${s.rank} ${s.name} 면회 (${s.traits.visit.visitor}) 희망합니다.`;
   })];
@@ -202,7 +254,7 @@ function buildHaircut(ctx: BuildCtx): string[] {
   if (!ctx.group.civHaircut.enabled) return [];
   const members = resolve(ctx.group.civHaircut.members, ctx);
   return [
-    '', '💈 민간이발',
+    '', `${SECTION_ICONS['민간이발']} 민간이발`,
     members.length > 0 ? `${formatMembers(members)} 희망합니다.` : '-',
   ];
 }
@@ -213,7 +265,7 @@ function buildMilTraining(ctx: BuildCtx): string[] {
     ? MIL_TRAININGS.filter((cat) => resolve(group.milTraining[cat], ctx).length > 0)
     : [];
 
-  const lines = ['', '⬆️ 병기본'];
+  const lines = ['', `${SECTION_ICONS['병기본']} 병기본`];
   if (active.length === 0) return [...lines, '', `${room}생활관 병기본 희망자 없습니다.`];
 
   for (const cat of active) {
@@ -234,7 +286,7 @@ function buildDelivery(ctx: BuildCtx): string[] {
 
   if (valid.length === 0) return [];
 
-  const lines = ['', '🍜 배달 음식', ''];
+  const lines = ['', `${SECTION_ICONS['배달 음식']} 배달 음식`, ''];
   for (const order of valid) {
     const members = resolve(order.members, ctx);
     if (members.length > 0) {
@@ -261,7 +313,7 @@ export function buildMessage(msgCtx: MessageContext): string {
 
   return [
     ...buildHeader(ctx),
-    ...buildVacation(ctx),
+    ...buildLeave(ctx),
     ...buildReligion(ctx),
     ...buildOutpatient(ctx),
     ...buildVisit(ctx),

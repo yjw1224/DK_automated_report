@@ -43,14 +43,21 @@ export interface OutpatientTrait {
   place: string;
 }
 
-// ─── 휴가 일정 ────────────────────────────────────────────────────────────────
-export interface VacationTrait {
-  /** 휴가 일정 있음 여부 */
-  hasVacation: boolean;
-  /** 시작일 (YYYY-MM-DD) */
+// ─── 출타 일정 ────────────────────────────────────────────────────────────────
+export const LEAVE_TYPES = ['휴가', '평일외출', '주말외출', '외박'] as const;
+export type LeaveType = (typeof LEAVE_TYPES)[number];
+
+export interface LeaveEntry {
+  /** 출타 종류 */
+  type: LeaveType;
+  /** 시작일 (YYYY-MM-DD) — 휴가·외박은 시작일, 평일외출·주말외출은 당일 */
   startDate: string;
-  /** 종료일 (YYYY-MM-DD) */
+  /** 종료일 (YYYY-MM-DD) — 휴가·외박만 사용 */
   endDate: string;
+}
+
+export function defaultLeaveEntry(): LeaveEntry {
+  return { type: '휴가', startDate: '', endDate: '' };
 }
 
 // ─── 단체 설정 ────────────────────────────────────────────────────────────────
@@ -71,7 +78,7 @@ export interface DeliveryOrder {
 // defaultTraits() 함수에 기본값을 추가하면 됩니다.
 export interface PersonnelTraits {
   absence: AbsenceTrait;
-  vacation: VacationTrait;
+  leaves: LeaveEntry[];
   outpatient: OutpatientTrait;
   visit: VisitTrait;
   // 5. 종교 — 추후 추가
@@ -89,11 +96,7 @@ export function defaultTraits(): PersonnelTraits {
       reason: null,
       customReason: ''
     },
-    vacation: {
-      hasVacation: false,
-      startDate: '',
-      endDate: ''
-    },
+    leaves: [],
     outpatient: {
       hasOutpatient: false,
       date: '',
