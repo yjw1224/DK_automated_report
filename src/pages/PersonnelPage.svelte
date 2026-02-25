@@ -2,14 +2,31 @@
   import { onMount, tick } from 'svelte';
   import {
     ABSENCE_PRESET_REASONS,
+    MIL_TRAININGS,
     RANKS,
+    RELIGIONS,
     defaultTraits,
     type AbsencePresetReason,
+    type DeliveryOrder,
+    type MilTraining,
     type PersonnelTraits,
     type Rank,
+    type Religion,
     type Slot,
     type Soldier
   } from '../lib/types';
+  import {
+    CLS_CHIP,
+    CLS_FIELD_ERR,
+    CLS_FIELD_OK,
+    CLS_INPUT,
+    CLS_OFF,
+    CLS_ON_BLUE,
+    CLS_ON_DARK,
+    CLS_ON_ORANGE,
+    CLS_SEC_TITLE,
+    CLS_TOGGLE
+  } from '../lib/styles';
 
   export let battery: string;
   export let room: string;
@@ -38,17 +55,9 @@
 
   // ── 단체 설정 ────────────────────────────────────────────────────────────────
   let civHaircut: { enabled: boolean; members: string[] } = { enabled: false, members: [] };
-
-  const RELIGIONS = ['기독교', '천주교', '불교'] as const;
-  type Religion = typeof RELIGIONS[number];
   let religion: Record<Religion, string[]> = { '기독교': [], '천주교': [], '불교': [] };
-
-  const MIL_TRAININGS = ['사격', '체력 측정', 'TCCC', '화생방', '정신전력'] as const;
-  type MilTraining = typeof MIL_TRAININGS[number];
   let milTrainingEnabled = false;
   let milTraining: Record<MilTraining, string[]> = { '사격': [], '체력 측정': [], 'TCCC': [], '화생방': [], '정신전력': [] };
-
-  type DeliveryOrder = { date: string; type: string; members: string[] };
   let deliveryEnabled = false;
   let deliveryOrders: DeliveryOrder[] = [];
 
@@ -338,7 +347,7 @@
         </select>
         <input
           bind:this={nameInputEl}
-          class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+          class="min-w-0 flex-1 {CLS_INPUT}"
           type="text"
           placeholder="이름 입력"
           bind:value={newName}
@@ -377,7 +386,7 @@
         <select
           id="draft-rank"
           bind:value={draft.rank}
-          class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+          class={CLS_INPUT}
         >
           {#each RANKS as rank}
             <option value={rank}>{rank}</option>
@@ -390,7 +399,7 @@
         <label for="draft-name" class="text-xs font-semibold text-slate-600">이름</label>
         <input
           id="draft-name"
-          class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+          class={CLS_INPUT}
           type="text"
           bind:value={draft.name}
         />
@@ -398,27 +407,21 @@
 
       <!-- 특성 1: 열외 여부 -->
       <div class="flex flex-col gap-2.5">
-        <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">열외</span>
+        <span class={CLS_SEC_TITLE}>열외</span>
 
         <!-- Y / N 토글 -->
         <div class="flex gap-2">
           <button
             type="button"
             on:click={() => { if (draft) draft.traits.absence.isAbsent = true; }}
-            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-              {draft.traits.absence.isAbsent
-                ? 'border-orange-400 bg-orange-100 text-orange-700'
-                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+            class="{CLS_TOGGLE} {draft.traits.absence.isAbsent ? CLS_ON_ORANGE : CLS_OFF}"
           >
             열외
           </button>
           <button
             type="button"
             on:click={() => { if (draft) { draft.traits.absence.isAbsent = false; draft.traits.absence.reason = null; draft.traits.absence.customReason = ''; useCustomReason = false; } }}
-            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-              {!draft.traits.absence.isAbsent
-                ? 'border-slate-700 bg-slate-800 text-white'
-                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+            class="{CLS_TOGGLE} {!draft.traits.absence.isAbsent ? CLS_ON_DARK : CLS_OFF}"
           >
             정상
           </button>
@@ -431,7 +434,7 @@
             <select
               value={useCustomReason ? '__custom__' : (draft.traits.absence.reason ?? ABSENCE_PRESET_REASONS[0])}
               on:change={onAbsenceReasonChange}
-              class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+              class={CLS_INPUT}
             >
               <option value="__custom__">직접 입력</option>
               {#each ABSENCE_PRESET_REASONS as reason}
@@ -443,8 +446,8 @@
               <input
                 class="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.absence.customReason.trim()
-                    ? 'border-red-400 bg-red-50 ring-red-400'
-                    : 'border-slate-300 ring-blue-500'}"
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}"
                 type="text"
                 placeholder="사유 직접 입력"
                 bind:value={draft.traits.absence.customReason}
@@ -459,27 +462,21 @@
 
       <!-- 특성: 휴가 -->
       <div class="flex flex-col gap-2">
-        <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">휴가</span>
+        <span class={CLS_SEC_TITLE}>휴가</span>
 
         <!-- 있음 / 없음 토글 -->
         <div class="flex gap-2">
           <button
             type="button"
             on:click={() => { if (draft) draft.traits.vacation.hasVacation = true; }}
-            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-              {draft.traits.vacation.hasVacation
-                ? 'border-blue-400 bg-blue-100 text-blue-700'
-                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+            class="{CLS_TOGGLE} {draft.traits.vacation.hasVacation ? CLS_ON_BLUE : CLS_OFF}"
           >
             있음
           </button>
           <button
             type="button"
             on:click={() => { if (draft) { draft.traits.vacation.hasVacation = false; draft.traits.vacation.startDate = ''; draft.traits.vacation.endDate = ''; } }}
-            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-              {!draft.traits.vacation.hasVacation
-                ? 'border-slate-700 bg-slate-800 text-white'
-                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+            class="{CLS_TOGGLE} {!draft.traits.vacation.hasVacation ? CLS_ON_DARK : CLS_OFF}"
           >
             없음
           </button>
@@ -495,8 +492,8 @@
                 bind:value={draft.traits.vacation.startDate}
                 class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.vacation.startDate
-                    ? 'border-red-400 bg-red-50 ring-red-400'
-                    : 'border-slate-300 ring-blue-500'}"
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}"
               />
             </div>
             <div class="flex items-center gap-2">
@@ -507,8 +504,8 @@
                 min={draft.traits.vacation.startDate || undefined}
                 class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.vacation.endDate
-                    ? 'border-red-400 bg-red-50 ring-red-400'
-                    : 'border-slate-300 ring-blue-500'}"
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}"
               />
             </div>
             {#if saveAttempted && (!draft.traits.vacation.startDate || !draft.traits.vacation.endDate)}
@@ -527,27 +524,21 @@
 
       <!-- 특성: 외진 -->
       <div class="flex flex-col gap-2">
-        <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">외진</span>
+        <span class={CLS_SEC_TITLE}>외진</span>
 
         <!-- Y / N 토글 -->
         <div class="flex gap-2">
           <button
             type="button"
             on:click={() => { if (draft) draft.traits.outpatient.hasOutpatient = true; }}
-            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-              {draft.traits.outpatient.hasOutpatient
-                ? 'border-blue-400 bg-blue-100 text-blue-700'
-                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+            class="{CLS_TOGGLE} {draft.traits.outpatient.hasOutpatient ? CLS_ON_BLUE : CLS_OFF}"
           >
             있음
           </button>
           <button
             type="button"
             on:click={() => { if (draft) { draft.traits.outpatient.hasOutpatient = false; draft.traits.outpatient.date = ''; draft.traits.outpatient.place = ''; } }}
-            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-              {!draft.traits.outpatient.hasOutpatient
-                ? 'border-slate-700 bg-slate-800 text-white'
-                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+            class="{CLS_TOGGLE} {!draft.traits.outpatient.hasOutpatient ? CLS_ON_DARK : CLS_OFF}"
           >
             없음
           </button>
@@ -563,8 +554,8 @@
                 bind:value={draft.traits.outpatient.date}
                 class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.outpatient.date
-                    ? 'border-red-400 bg-red-50 ring-red-400'
-                    : 'border-slate-300 ring-blue-500'}"
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}"
               />
             </div>
             <div class="flex items-center gap-2">
@@ -575,8 +566,8 @@
                 bind:value={draft.traits.outpatient.place}
                 class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.outpatient.place.trim()
-                    ? 'border-red-400 bg-red-50 ring-red-400'
-                    : 'border-slate-300 ring-blue-500'}"
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}"
               />
             </div>
             {#if saveAttempted && (!draft.traits.outpatient.date || !draft.traits.outpatient.place.trim())}
@@ -588,27 +579,21 @@
 
       <!-- 특성: 면회 -->
       <div class="flex flex-col gap-2">
-        <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">면회</span>
+        <span class={CLS_SEC_TITLE}>면회</span>
 
         <!-- Y / N 토글 -->
         <div class="flex gap-2">
           <button
             type="button"
             on:click={() => { if (draft) draft.traits.visit.hasVisit = true; }}
-            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-              {draft.traits.visit.hasVisit
-                ? 'border-blue-400 bg-blue-100 text-blue-700'
-                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+            class="{CLS_TOGGLE} {draft.traits.visit.hasVisit ? CLS_ON_BLUE : CLS_OFF}"
           >
             있음
           </button>
           <button
             type="button"
             on:click={() => { if (draft) { draft.traits.visit.hasVisit = false; draft.traits.visit.date = ''; draft.traits.visit.visitor = ''; } }}
-            class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-              {!draft.traits.visit.hasVisit
-                ? 'border-slate-700 bg-slate-800 text-white'
-                : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+            class="{CLS_TOGGLE} {!draft.traits.visit.hasVisit ? CLS_ON_DARK : CLS_OFF}"
           >
             없음
           </button>
@@ -624,8 +609,8 @@
                 bind:value={draft.traits.visit.date}
                 class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.visit.date
-                    ? 'border-red-400 bg-red-50 ring-red-400'
-                    : 'border-slate-300 ring-blue-500'}"
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}"
               />
             </div>
             <div class="flex items-center gap-2">
@@ -636,8 +621,8 @@
                 bind:value={draft.traits.visit.visitor}
                 class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.visit.visitor.trim()
-                    ? 'border-red-400 bg-red-50 ring-red-400'
-                    : 'border-slate-300 ring-blue-500'}"
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}"
               />
             </div>
             {#if saveAttempted && (!draft.traits.visit.date || !draft.traits.visit.visitor.trim())}
@@ -680,25 +665,19 @@
 
     <!-- 민간 이발 -->
     <div class="flex flex-col gap-2">
-      <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">민간 이발</span>
+      <span class={CLS_SEC_TITLE}>민간 이발</span>
       <div class="flex gap-2">
         <button
           type="button"
           on:click={() => { civHaircut.enabled = true; persistGroup(); }}
-          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-            {civHaircut.enabled
-              ? 'border-blue-400 bg-blue-100 text-blue-700'
-              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          class="{CLS_TOGGLE} {civHaircut.enabled ? CLS_ON_BLUE : CLS_OFF}"
         >
           있음
         </button>
         <button
           type="button"
           on:click={() => { civHaircut.enabled = false; civHaircut.members = []; persistGroup(); }}
-          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-            {!civHaircut.enabled
-              ? 'border-slate-700 bg-slate-800 text-white'
-              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          class="{CLS_TOGGLE} {!civHaircut.enabled ? CLS_ON_DARK : CLS_OFF}"
         >
           없음
         </button>
@@ -715,10 +694,7 @@
                 <button
                   type="button"
                   on:click={() => toggleCivHaircutMember(soldier.name)}
-                  class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-                    {civHaircut.members.includes(soldier.name)
-                      ? 'border-blue-400 bg-blue-100 text-blue-700'
-                      : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+                  class="{CLS_CHIP} {civHaircut.members.includes(soldier.name) ? CLS_ON_BLUE : CLS_OFF}"
                 >
                   {soldier.name}
                 </button>
@@ -731,7 +707,7 @@
 
     <!-- 종교 -->
     <div class="flex flex-col gap-2">
-      <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">종교</span>
+      <span class={CLS_SEC_TITLE}>종교</span>
       {#if soldiers.length === 0}
         <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
       {:else}
@@ -744,12 +720,11 @@
                 <button
                   type="button"
                   on:click={() => toggleReligionMember(rel, soldier.name)}
-                  class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-                    {religion[rel].includes(soldier.name)
-                      ? 'border-blue-400 bg-blue-100 text-blue-700'
+                  class="{CLS_CHIP} {religion[rel].includes(soldier.name)
+                      ? CLS_ON_BLUE
                       : assigned
                         ? 'border-slate-200 bg-slate-100 text-slate-300'
-                        : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+                        : CLS_OFF}"
                 >
                   {soldier.name}
                 </button>
@@ -761,25 +736,19 @@
     </div>
     <!-- 병기본 -->
     <div class="flex flex-col gap-2">
-      <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">병기본</span>
+      <span class={CLS_SEC_TITLE}>병기본</span>
       <div class="flex gap-2">
         <button
           type="button"
           on:click={() => { milTrainingEnabled = true; persistGroup(); }}
-          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-            {milTrainingEnabled
-              ? 'border-blue-400 bg-blue-100 text-blue-700'
-              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          class="{CLS_TOGGLE} {milTrainingEnabled ? CLS_ON_BLUE : CLS_OFF}"
         >
           있음
         </button>
         <button
           type="button"
           on:click={() => { milTrainingEnabled = false; for (const c of MIL_TRAININGS) milTraining[c] = []; milTraining = { ...milTraining }; persistGroup(); }}
-          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-            {!milTrainingEnabled
-              ? 'border-slate-700 bg-slate-800 text-white'
-              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          class="{CLS_TOGGLE} {!milTrainingEnabled ? CLS_ON_DARK : CLS_OFF}"
         >
           없음
         </button>
@@ -797,10 +766,7 @@
                   <button
                     type="button"
                     on:click={() => toggleMilTrainingMember(cat, soldier.name)}
-                    class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-                      {milTraining[cat].includes(soldier.name)
-                        ? 'border-blue-400 bg-blue-100 text-blue-700'
-                        : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+                    class="{CLS_CHIP} {milTraining[cat].includes(soldier.name) ? CLS_ON_BLUE : CLS_OFF}"
                   >
                     {soldier.name}
                   </button>
@@ -813,25 +779,19 @@
     </div>
     <!-- 배달 음식 -->
     <div class="flex flex-col gap-2">
-      <span class="border-b border-slate-200 pb-1 text-sm font-bold text-slate-700">배달 음식</span>
+      <span class={CLS_SEC_TITLE}>배달 음식</span>
       <div class="flex gap-2">
         <button
           type="button"
           on:click={() => { deliveryEnabled = true; if (deliveryOrders.length === 0) deliveryOrders = [{ date: reportDate, type: '', members: [] }]; persistGroup(); }}
-          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-            {deliveryEnabled
-              ? 'border-blue-400 bg-blue-100 text-blue-700'
-              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          class="{CLS_TOGGLE} {deliveryEnabled ? CLS_ON_BLUE : CLS_OFF}"
         >
           있음
         </button>
         <button
           type="button"
           on:click={() => { deliveryEnabled = false; deliveryOrders = []; persistGroup(); }}
-          class="flex-1 rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-            {!deliveryEnabled
-              ? 'border-slate-700 bg-slate-800 text-white'
-              : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+          class="{CLS_TOGGLE} {!deliveryEnabled ? CLS_ON_DARK : CLS_OFF}"
         >
           없음
         </button>
@@ -864,6 +824,7 @@
                 <span class="w-10 shrink-0 text-xs text-slate-500">종류</span>
                 <input
                   type="text"
+                  required
                   placeholder="음식 종류 입력"
                   bind:value={order.type}
                   on:input={() => persistGroup()}
@@ -880,10 +841,7 @@
                       <button
                         type="button"
                         on:click={() => toggleDeliveryMember(idx, soldier.name)}
-                        class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors
-                          {order.members.includes(soldier.name)
-                            ? 'border-blue-400 bg-blue-100 text-blue-700'
-                            : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}"
+                        class="{CLS_CHIP} {order.members.includes(soldier.name) ? CLS_ON_BLUE : CLS_OFF}"
                       >
                         {soldier.name}
                       </button>

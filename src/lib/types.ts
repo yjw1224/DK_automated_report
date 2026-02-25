@@ -53,6 +53,19 @@ export interface VacationTrait {
   endDate: string;
 }
 
+// ─── 단체 설정 ────────────────────────────────────────────────────────────────
+export const RELIGIONS = ['기독교', '천주교', '불교'] as const;
+export type Religion = (typeof RELIGIONS)[number];
+
+export const MIL_TRAININGS = ['사격', '체력 측정', 'TCCC', '화생방', '정신전력'] as const;
+export type MilTraining = (typeof MIL_TRAININGS)[number];
+
+export interface DeliveryOrder {
+  date: string;
+  type: string;
+  members: string[];
+}
+
 // ─── 인원 특성 ─────────────────────────────────────────────────────────────────
 // 추후 특성을 추가할 때 이 인터페이스에 필드를 추가하고
 // defaultTraits() 함수에 기본값을 추가하면 됩니다.
