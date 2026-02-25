@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import LoadPage from './pages/LoadPage.svelte';
-  import MessagePage from './pages/MessagePage.svelte';
   import PersonnelPage from './pages/PersonnelPage.svelte';
   import { buildHash, parseHash, type RouteName } from './lib/router';
 
@@ -163,12 +162,9 @@
         </label>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-3">
+      <div class="grid gap-3 sm:grid-cols-2">
         <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('personnel')}>
           생활관 인원 관리
-        </button>
-        <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('message')}>
-          대표병 카톡 생성
         </button>
         <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('load')}>
           불러오기
@@ -177,11 +173,6 @@
     </section>
   {:else if currentRoute === 'personnel'}
     <PersonnelPage {battery} {room} {reportDate} />
-    <div class="mx-auto mt-4 w-full max-w-3xl">
-      <button class={CLS_BACK_BTN} type="button" on:click={goHome}>메인으로 돌아가기</button>
-    </div>
-  {:else if currentRoute === 'message'}
-    <MessagePage {battery} {room} {reportDate} />
     <div class="mx-auto mt-4 w-full max-w-3xl">
       <button class={CLS_BACK_BTN} type="button" on:click={goHome}>메인으로 돌아가기</button>
     </div>

@@ -1,4 +1,4 @@
-export type RouteName = 'home' | 'personnel' | 'message' | 'load';
+export type RouteName = 'home' | 'personnel' | 'load';
 
 export interface ReportContext {
   battery: string;
@@ -9,14 +9,12 @@ export interface ReportContext {
 const ROUTE_PATHS: Record<RouteName, string> = {
   home: '/',
   personnel: '/personnel',
-  message: '/message',
   load: '/load'
 };
 
 const PATH_TO_ROUTE: Record<string, RouteName> = {
   '/': 'home',
   '/personnel': 'personnel',
-  '/message': 'message',
   '/load': 'load'
 };
 
