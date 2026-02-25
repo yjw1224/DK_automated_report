@@ -3,6 +3,7 @@
   import LoadPage from './pages/LoadPage.svelte';
   import PersonnelPage from './pages/PersonnelPage.svelte';
   import { buildHash, parseHash, type RouteName } from './lib/router';
+    import { CLS_ON_DARK, CLS_TOGGLE } from './lib/styles';
 
   type Battery = '1' | '2' | '3' | '본부';
   type Room = '1' | '2' | '3';
@@ -163,8 +164,8 @@
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">
-        <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('personnel')}>
-          생활관 인원 관리
+        <button class={`${CLS_TOGGLE} ${CLS_ON_DARK}`} type="button" on:click={() => goTo('personnel')}>
+          시작하기
         </button>
         <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('load')}>
           불러오기
@@ -174,12 +175,12 @@
   {:else if currentRoute === 'personnel'}
     <PersonnelPage {battery} {room} {reportDate} />
     <div class="mx-auto mt-4 w-full max-w-3xl">
-      <button class={CLS_BACK_BTN} type="button" on:click={goHome}>메인으로 돌아가기</button>
+      <button class={CLS_BACK_BTN} type="button" on:click={goHome}>돌아가기</button>
     </div>
   {:else if currentRoute === 'load'}
     <LoadPage {battery} {room} {reportDate} />
     <div class="mx-auto mt-4 w-full max-w-3xl">
-      <button class={CLS_BACK_BTN} type="button" on:click={goHome}>메인으로 돌아가기</button>
+      <button class={CLS_BACK_BTN} type="button" on:click={goHome}>돌아가기</button>
     </div>
   {/if}
 </main>
