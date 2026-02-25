@@ -89,13 +89,13 @@
     const rawGroup = localStorage.getItem(groupStorageKey());
     if (rawGroup) {
       try {
-        const parsedGroup = JSON.parse(rawGroup);
-        if (parsedGroup?.civHaircut) civHaircut = parsedGroup.civHaircut;
-        if (parsedGroup?.religion) religion = parsedGroup.religion;
-        if (parsedGroup?.milTrainingEnabled !== undefined) milTrainingEnabled = parsedGroup.milTrainingEnabled;
-        if (parsedGroup?.milTraining) milTraining = parsedGroup.milTraining;
-        if (parsedGroup?.deliveryEnabled !== undefined) deliveryEnabled = parsedGroup.deliveryEnabled;
-        if (parsedGroup?.deliveryOrders) deliveryOrders = parsedGroup.deliveryOrders;
+        const g = JSON.parse(rawGroup);
+        civHaircut = g.civHaircut ?? civHaircut;
+        religion = g.religion ?? religion;
+        milTrainingEnabled = g.milTrainingEnabled ?? milTrainingEnabled;
+        milTraining = g.milTraining ?? milTraining;
+        deliveryEnabled = g.deliveryEnabled ?? deliveryEnabled;
+        deliveryOrders = g.deliveryOrders ?? deliveryOrders;
       } catch {
         // 파싱 실패 시 기본값 유지
       }
@@ -110,35 +110,26 @@
     localStorage.setItem(groupStorageKey(), JSON.stringify({ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders }));
   }
 
+  /** 배열 내 멤버 토글 (있으면 제거, 없으면 추가) */
+  function toggleMember(arr: string[], name: string): string[] {
+    return arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name];
+  }
+
   function toggleCivHaircutMember(name: string) {
-    if (civHaircut.members.includes(name)) {
-      civHaircut.members = civHaircut.members.filter((n) => n !== name);
-    } else {
-      civHaircut.members = [...civHaircut.members, name];
-    }
+    civHaircut.members = toggleMember(civHaircut.members, name);
     persistGroup();
   }
 
   function toggleReligionMember(rel: Religion, name: string) {
     const inThis = religion[rel].includes(name);
-    // 모든 종교에서 먼저 제거 (한 명당 최대 하나)
-    for (const r of RELIGIONS) {
-      religion[r] = religion[r].filter((n) => n !== name);
-    }
-    // 다른 종교에 있었거나, 같은 종교를 재클릭하지 않은 경우 추가
-    if (!inThis) {
-      religion[rel] = [...religion[rel], name];
-    }
+    for (const r of RELIGIONS) religion[r] = religion[r].filter((n) => n !== name);
+    if (!inThis) religion[rel] = [...religion[rel], name];
     religion = { ...religion };
     persistGroup();
   }
 
   function toggleMilTrainingMember(cat: MilTraining, name: string) {
-    if (milTraining[cat].includes(name)) {
-      milTraining[cat] = milTraining[cat].filter((n) => n !== name);
-    } else {
-      milTraining[cat] = [...milTraining[cat], name];
-    }
+    milTraining[cat] = toggleMember(milTraining[cat], name);
     milTraining = { ...milTraining };
     persistGroup();
   }
@@ -154,12 +145,7 @@
   }
 
   function toggleDeliveryMember(idx: number, name: string) {
-    const order = deliveryOrders[idx];
-    if (order.members.includes(name)) {
-      order.members = order.members.filter((n) => n !== name);
-    } else {
-      order.members = [...order.members, name];
-    }
+    deliveryOrders[idx].members = toggleMember(deliveryOrders[idx].members, name);
     deliveryOrders = [...deliveryOrders];
     persistGroup();
   }
@@ -203,24 +189,29 @@
     newRank = '이병';
   }
 
+  // ── 유효성 검사 ──────────────────────────────────────────────────────────────
+  function isDraftValid(d: Soldier): boolean {
+    if (useCustomReason && d.traits.absence.isAbsent && !d.traits.absence.customReason.trim()) return false;
+    if (d.traits.vacation.hasVacation && (!d.traits.vacation.startDate || !d.traits.vacation.endDate)) return false;
+    if (d.traits.outpatient.hasOutpatient && (!d.traits.outpatient.date || !d.traits.outpatient.place.trim())) return false;
+    if (d.traits.visit.hasVisit && (!d.traits.visit.date || !d.traits.visit.visitor.trim())) return false;
+    return true;
+  }
+
+  /** 열외 사유 필드 정리 (저장 직전) */
+  function normalizeAbsence(d: Soldier) {
+    const a = d.traits.absence;
+    if (!a.isAbsent) { a.reason = null; a.customReason = ''; }
+    else if (useCustomReason) { a.reason = null; }
+    else { a.customReason = ''; }
+  }
+
   // ── 드래프트 저장 ────────────────────────────────────────────────────────────
   function saveDraft() {
     if (selectedIndex === null || !draft) return;
     saveAttempted = true;
-    // 유효성 검사
-    if (useCustomReason && draft.traits.absence.isAbsent && !draft.traits.absence.customReason.trim()) return;
-    if (draft.traits.vacation.hasVacation && (!draft.traits.vacation.startDate || !draft.traits.vacation.endDate)) return;
-    if (draft.traits.outpatient.hasOutpatient && (!draft.traits.outpatient.date || !draft.traits.outpatient.place.trim())) return;
-    if (draft.traits.visit.hasVisit && (!draft.traits.visit.date || !draft.traits.visit.visitor.trim())) return;
-    // 커스텀 사유 모드인데 추가로 reason이 남아 있으면 null 처리
-    if (!draft.traits.absence.isAbsent) {
-      draft.traits.absence.reason = null;
-      draft.traits.absence.customReason = '';
-    } else if (useCustomReason) {
-      draft.traits.absence.reason = null;
-    } else {
-      draft.traits.absence.customReason = '';
-    }
+    if (!isDraftValid(draft)) return;
+    normalizeAbsence(draft);
     slots[selectedIndex] = structuredClone(draft);
     slots = [...slots];
     persist();
@@ -757,7 +748,7 @@
         </button>
         <button
           type="button"
-          on:click={() => { milTrainingEnabled = false; for (const c of MIL_TRAININGS) milTraining[c] = []; milTraining = { ...milTraining }; persistGroup(); }}
+          on:click={() => { milTrainingEnabled = false; MIL_TRAININGS.forEach((c) => milTraining[c] = []); milTraining = { ...milTraining }; persistGroup(); }}
           class="{CLS_TOGGLE} {!milTrainingEnabled ? CLS_ON_DARK : CLS_OFF}"
         >
           없음
@@ -889,10 +880,5 @@
   {room}
   {reportDate}
   {slots}
-  {civHaircut}
-  {religion}
-  {milTrainingEnabled}
-  {milTraining}
-  {deliveryEnabled}
-  {deliveryOrders}
+  group={{ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders }}
 />

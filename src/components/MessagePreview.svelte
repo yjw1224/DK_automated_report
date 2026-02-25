@@ -1,38 +1,20 @@
 <script lang="ts">
-  import { buildMessage, type GroupSettings, type MessageContext } from '../lib/messageBuilder';
-  import type { MilTraining, Religion, Slot } from '../lib/types';
+  import { onDestroy } from 'svelte';
+  import { buildMessage, type GroupSettings } from '../lib/messageBuilder';
+  import type { Slot } from '../lib/types';
 
   export let battery: string;
   export let room: string;
   export let reportDate: string;
   export let slots: Slot[];
-  export let civHaircut: { enabled: boolean; members: string[] };
-  export let religion: Record<Religion, string[]>;
-  export let milTrainingEnabled: boolean;
-  export let milTraining: Record<MilTraining, string[]>;
-  export let deliveryEnabled: boolean;
-  export let deliveryOrders: { date: string; type: string; members: string[] }[];
-
+  export let group: GroupSettings;
   export let visible = false;
 
   let copied = false;
   let copyTimeout: ReturnType<typeof setTimeout> | null = null;
 
   $: message = visible
-    ? buildMessage({
-        battery,
-        room,
-        reportDate,
-        slots,
-        group: {
-          civHaircut,
-          religion,
-          milTrainingEnabled,
-          milTraining,
-          deliveryEnabled,
-          deliveryOrders
-        }
-      })
+    ? buildMessage({ battery, room, reportDate, slots, group })
     : '';
 
   function close() {
@@ -40,30 +22,28 @@
     copied = false;
   }
 
+  /** 복사 성공 피드백 (2초간 체크 표시) */
+  function showCopiedFeedback() {
+    copied = true;
+    if (copyTimeout) clearTimeout(copyTimeout);
+    copyTimeout = setTimeout(() => { copied = false; }, 2000);
+  }
+
   async function copyToClipboard() {
     try {
       await navigator.clipboard.writeText(message);
-      copied = true;
-      if (copyTimeout) clearTimeout(copyTimeout);
-      copyTimeout = setTimeout(() => {
-        copied = false;
-      }, 2000);
     } catch {
       // fallback: 구형 브라우저 대응
-      const textarea = document.createElement('textarea');
-      textarea.value = message;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
+      const ta = Object.assign(document.createElement('textarea'), {
+        value: message,
+        style: 'position:fixed;opacity:0',
+      });
+      document.body.appendChild(ta);
+      ta.select();
       document.execCommand('copy');
-      document.body.removeChild(textarea);
-      copied = true;
-      if (copyTimeout) clearTimeout(copyTimeout);
-      copyTimeout = setTimeout(() => {
-        copied = false;
-      }, 2000);
+      ta.remove();
     }
+    showCopiedFeedback();
   }
 
   function handleOverlayClick(e: MouseEvent) {
@@ -73,6 +53,8 @@
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') close();
   }
+
+  onDestroy(() => { if (copyTimeout) clearTimeout(copyTimeout); });
 </script>
 
 {#if visible}
