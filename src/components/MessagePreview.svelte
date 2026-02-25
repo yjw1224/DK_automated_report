@@ -46,6 +46,21 @@
     showCopiedFeedback();
   }
 
+  async function shareMessage() {
+    // Web Share API 지원 시 (모바일 크롬 등)
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: message });
+        return;
+      } catch (e: any) {
+        // 사용자가 공유 취소한 경우 무시
+        if (e?.name === 'AbortError') return;
+      }
+    }
+    // 미지원 브라우저: 클립보드 복사 fallback
+    await copyToClipboard();
+  }
+
   function handleOverlayClick(e: MouseEvent) {
     if (e.target === e.currentTarget) close();
   }
@@ -94,13 +109,13 @@
       <div class="flex gap-2 border-t border-slate-200 px-5 py-3">
         <button
           type="button"
-          on:click={copyToClipboard}
+          on:click={shareMessage}
           class="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors
             {copied
               ? 'bg-green-600 text-white'
               : 'bg-slate-900 text-white hover:bg-slate-700'}"
         >
-          {copied ? '✓ 복사 완료' : '클립보드에 복사'}
+          {copied ? '✓ 복사 완료' : '공유하기'}
         </button>
         <button
           type="button"
