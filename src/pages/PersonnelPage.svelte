@@ -2,9 +2,11 @@
   import { onMount, tick } from 'svelte';
   import {
     ABSENCE_PRESET_REASONS,
+    RANKS,
     defaultTraits,
     type AbsencePresetReason,
     type PersonnelTraits,
+    type Rank,
     type Slot,
     type Soldier
   } from '../lib/types';
@@ -24,6 +26,7 @@
 
   // 빈 자리용 - 신규 이름 입력
   let newName = '';
+  let newRank: Rank = '이병';
   let nameInputEl: HTMLInputElement | null = null;
 
   // 채워진 자리용 - 드래프트 (저장 전 임시 편집값)
@@ -164,6 +167,7 @@
       // 빈 자리: 이름 입력 초기화
       draft = null;
       newName = '';
+      newRank = '이병';
       // DOM 업데이트 후 input에 포커스
       await tick();
       nameInputEl?.focus();
@@ -175,13 +179,14 @@
     if (selectedIndex === null) return;
     const trimmed = newName.trim();
     if (!trimmed) return;
-    slots[selectedIndex] = { name: trimmed, traits: defaultTraits() };
+    slots[selectedIndex] = { rank: newRank, name: trimmed, traits: defaultTraits() };
     slots = [...slots];
     persist();
     // 추가 후 바로 특성 편집 패널로 전환
     draft = structuredClone(slots[selectedIndex] as Soldier);
     useCustomReason = false;
     newName = '';
+    newRank = '이병';
   }
 
   // ── 드래프트 저장 ────────────────────────────────────────────────────────────
@@ -211,7 +216,9 @@
   // ── 인원 삭제 ───────────────────────────────────────────────────────────────
   function removeSlot() {
     if (selectedIndex === null) return;
-    if (!confirm(`${slots[selectedIndex]?.name ?? '이 인원'}을(를) 삭제할까요?`)) return;
+    const s = slots[selectedIndex];
+    const label = s ? `${s.rank} ${s.name}` : '이 인원';
+    if (!confirm(`${label}을(를) 삭제할까요?`)) return;
     slots[selectedIndex] = null;
     slots = [...slots];
     persist();
@@ -223,6 +230,7 @@
     selectedIndex = null;
     draft = null;
     newName = '';
+    newRank = '이병';
     useCustomReason = false;
     saveAttempted = false;
   }
@@ -300,7 +308,7 @@
               : 'border-dashed border-slate-300 bg-slate-50 text-slate-400 hover:bg-slate-100'}"
       >
         {#if slot}
-          <span>{slot.name}</span>
+          <span>{slot.rank} {slot.name}</span>
           {#if slot.traits.absence.isAbsent}
             <span class="mt-0.5 text-xs font-normal opacity-75">
               {absenceLabel(slot.traits)}
@@ -319,14 +327,24 @@
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
         신규 인원 추가 — {selectedIndex + 1}번 자리
       </p>
-      <input
-        bind:this={nameInputEl}
-        class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
-        type="text"
-        placeholder="이름 입력"
-        bind:value={newName}
-        on:keydown={(e) => e.key === 'Enter' && addSoldier()}
-      />
+      <div class="flex gap-2">
+        <select
+          bind:value={newRank}
+          class="w-20 shrink-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+        >
+          {#each RANKS as rank}
+            <option value={rank}>{rank}</option>
+          {/each}
+        </select>
+        <input
+          bind:this={nameInputEl}
+          class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+          type="text"
+          placeholder="이름 입력"
+          bind:value={newName}
+          on:keydown={(e) => e.key === 'Enter' && addSoldier()}
+        />
+      </div>
       <div class="flex gap-2">
         <button
           type="button"
@@ -350,8 +368,22 @@
   {#if selectedIndex !== null && draft !== null}
     <div class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {selectedIndex + 1}번 자리 — {draft.name}
+        {selectedIndex + 1}번 자리 — {draft.rank} {draft.name}
       </p>
+
+      <!-- 계급 -->
+      <div class="flex flex-col gap-1.5">
+        <label for="draft-rank" class="text-xs font-semibold text-slate-600">계급</label>
+        <select
+          id="draft-rank"
+          bind:value={draft.rank}
+          class="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
+        >
+          {#each RANKS as rank}
+            <option value={rank}>{rank}</option>
+          {/each}
+        </select>
+      </div>
 
       <!-- 이름 -->
       <div class="flex flex-col gap-1.5">

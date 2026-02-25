@@ -1,3 +1,8 @@
+// ─── 계급 ───────────────────────────────────────────────────────────────────
+export const RANKS = ['병장', '상병', '일병', '이병'] as const;
+
+export type Rank = (typeof RANKS)[number];
+
 // ─── 열외 사유 ────────────────────────────────────────────────────────────────
 export const ABSENCE_PRESET_REASONS = [
   '근무',
@@ -91,6 +96,8 @@ export function defaultTraits(): PersonnelTraits {
 
 // ─── 인원 (슬롯) ───────────────────────────────────────────────────────────────
 export interface Soldier {
+  /** 계급: 이병 / 일병 / 상병 / 병장 */
+  rank: Rank;
   name: string;
   traits: PersonnelTraits;
 }
