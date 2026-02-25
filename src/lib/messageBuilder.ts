@@ -320,5 +320,11 @@ export function buildMessage(msgCtx: MessageContext): string {
     ...buildHaircut(ctx),
     ...buildMilTraining(ctx),
     ...buildDelivery(ctx),
+    '',
+    '자살징후, 구타 및 가혹행위, 언어폭력 등 1번 항목 특이사항 없습니다.',
+    '',
+    '분대원 면담 및 관찰 결과 특이사항 없습니다.',
+    '',
+    '그 외 특이사항 및 건의사항 없습니다.',
   ].join('\n');
 }
