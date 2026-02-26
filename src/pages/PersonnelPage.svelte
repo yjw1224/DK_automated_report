@@ -215,7 +215,7 @@
     const a = d.traits.absence;
     if (!a.isAbsent) { a.reason = null; a.customReason = ''; }
     else if (useCustomReason) { a.reason = null; }
-    else { a.customReason = ''; }
+    else { a.customReason = ''; if (!a.reason) a.reason = ABSENCE_PRESET_REASONS[0]; }
   }
 
   // ── 드래프트 저장 ────────────────────────────────────────────────────────────
