@@ -111,7 +111,7 @@
     window.location.hash = '#/';
   }
 
-  const CLS_INPUT    = 'rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2';
+  const CLS_INPUT    = 'rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2 bg-white text-slate-700';
   const CLS_LABEL    = 'flex flex-col gap-2 text-sm font-medium';
   const CLS_NAV_BTN  = 'rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100';
   const CLS_BACK_BTN = `w-full bg-white ${CLS_NAV_BTN}`;
@@ -152,24 +152,22 @@
           </select>
         </label>
 
-        <label class={CLS_LABEL}>
+        <div class={CLS_LABEL}>
           보고 날짜
-          <input
-            bind:value={reportDate}
-            on:change={saveMainForm}
-            class={CLS_INPUT}
-            type="date"
-          />
-        </label>
+          <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            {new Date(reportDate + 'T00:00:00').toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+          </span>
+        </div>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">
-        <button class={`${CLS_TOGGLE} ${CLS_ON_DARK}`} type="button" on:click={() => goTo('personnel')}>
+        <button class={`${CLS_TOGGLE} ${CLS_ON_DARK} py-2`} type="button" on:click={() => goTo('personnel')}>
           시작하기
         </button>
         <button class={CLS_NAV_BTN} type="button" on:click={() => goTo('load')}>
           불러오기
         </button>
+        <p class="text-sm text-slate-500">Made by 윤진우<br>2026-02-26</p>
       </div>
     </section>
   {:else if currentRoute === 'personnel'}
