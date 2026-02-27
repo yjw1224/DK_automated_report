@@ -6,6 +6,7 @@ export type Rank = (typeof RANKS)[number];
 // ─── 열외 사유 ────────────────────────────────────────────────────────────────
 export const ABSENCE_PRESET_REASONS = [
   '근무',
+  '당직',
   '휴가',
   '외출',
   '외박',
