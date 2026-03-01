@@ -11,12 +11,16 @@
   const BATTERY_OPTIONS: readonly Battery[] = ['1', '2', '3', '본부'];
   const ROOM_OPTIONS: readonly Room[] = ['1', '2', '3'];
   const MAIN_FORM_STORAGE_KEY = 'dk-main-form';
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
+  
+  function getTodayIsoDate(): string {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
 
-  let reportDate = `${yyyy}-${mm}-${dd}`;
+  let reportDate = getTodayIsoDate();
   let battery: Battery = '1';
   let room: Room = '1';
   let currentRoute: RouteName = 'home';
@@ -36,9 +40,6 @@
       room = context.room;
     }
 
-    if (context.reportDate) {
-      reportDate = context.reportDate;
-    }
   }
 
   function loadFromStorage() {
@@ -56,17 +57,16 @@
         room = saved.room;
       }
 
-      if (saved.reportDate) {
-        reportDate = saved.reportDate;
-      }
     } catch {
       // 저장값 파싱 실패 시 기본값 유지
     }
   }
 
   onMount(() => {
+    reportDate = getTodayIsoDate();
     loadFromStorage();
     syncFromHash();
+    saveMainForm();
     window.addEventListener('hashchange', syncFromHash);
 
     return () => {
