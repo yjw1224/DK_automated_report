@@ -102,7 +102,8 @@
 
   async function exportTransferCode() {
     const code = await getTransferCode();
-    if (navigator.share) {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile && navigator.share) {
       try {
         await navigator.share({ text: code });
         return;

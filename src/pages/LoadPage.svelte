@@ -101,7 +101,7 @@
     <!-- 분석 버튼 -->
     {#if !preview}
       <button
-        class={`${CLS_TOGGLE} ${inputCode.trim() ? CLS_ON_DARK : CLS_OFF} py-2`}
+        class={`${CLS_TOGGLE} ${inputCode.trim() ? CLS_ON_DARK : CLS_OFF} py-2 cursor-pointer`}
         type="button"
         disabled={!inputCode.trim()}
         on:click={parseCode}
