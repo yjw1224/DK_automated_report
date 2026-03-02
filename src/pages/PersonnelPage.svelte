@@ -32,6 +32,7 @@
     CLS_SEC_TITLE,
     CLS_TOGGLE
   } from '../lib/styles';
+  import { encodeTransferData } from '../lib/transfer';
   import MessagePreview from '../components/MessagePreview.svelte';
 
   export let battery: string;
@@ -61,6 +62,56 @@
 
   // 메시지 미리보기 모달
   let showMessagePreview = false;
+
+  // 인수인계 내보내기
+  let exportCopied = false;
+  let exportTimer: ReturnType<typeof setTimeout> | null = null;
+
+  async function getTransferCode(): Promise<string> {
+    return encodeTransferData(battery, room, slots, {
+      civHaircut,
+      religion,
+      milTrainingEnabled,
+      milTraining,
+      deliveryEnabled,
+      deliveryOrders
+    });
+  }
+
+  function showExportFeedback() {
+    exportCopied = true;
+    if (exportTimer) clearTimeout(exportTimer);
+    exportTimer = setTimeout(() => { exportCopied = false; }, 2500);
+  }
+
+  async function copyTransferCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      const ta = Object.assign(document.createElement('textarea'), {
+        value: code,
+        style: 'position:fixed;opacity:0',
+      });
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    showExportFeedback();
+  }
+
+  async function exportTransferCode() {
+    const code = await getTransferCode();
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: code });
+        return;
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return;
+      }
+    }
+    await copyTransferCode(code);
+  }
 
   // ── 단체 설정 ────────────────────────────────────────────────────────────────
   let civHaircut: { enabled: boolean; members: string[] } = { enabled: false, members: [] };
@@ -951,6 +1002,15 @@
     class="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-bold text-white shadow-sm transition-colors hover:bg-blue-500 active:bg-blue-700"
   >
     📋 메시지 생성하기
+  </button>
+
+  <!-- ── 인수인계 내보내기 버튼 ── -->
+  <button
+    type="button"
+    on:click={exportTransferCode}
+    class="w-full rounded-xl border-2 {exportCopied ? 'border-green-400 bg-green-50 text-green-700' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'} px-4 py-3 text-base font-bold shadow-sm transition-colors"
+  >
+    {exportCopied ? '✅ 클립보드에 복사됨!' : '📤 인수인계 코드 공유'}
   </button>
 </section>
 
