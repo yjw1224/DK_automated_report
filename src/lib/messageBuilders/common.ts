@@ -17,7 +17,7 @@ export interface GroupSettings {
   milTrainingEnabled: boolean;
   milTraining: Record<MilTraining, string[]>;
   deliveryEnabled: boolean;
-  deliveryOrders: { date: string; type: string; members: string[] }[];
+  deliveryOrders: { date: string; time: string; type: string; members: string[] }[];
   groupNote: string;
 }
 

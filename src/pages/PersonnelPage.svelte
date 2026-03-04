@@ -194,7 +194,7 @@
   }
 
   function addDeliveryOrder() {
-    deliveryOrders = [...deliveryOrders, { date: reportDate, type: '', members: [] }];
+    deliveryOrders = [...deliveryOrders, { date: reportDate, time: '', type: '', members: [] }];
     persistGroup();
   }
 
@@ -608,8 +608,8 @@
                 </p>
               {/if}
 
-            <!-- 외박: 시작일만 (종료일 = 다음 날 자동) -->
-            {:else if entry.type === '외박'}
+            <!-- 주말외박 / 면회외박: 시작일만 (종료일 = 다음 날 자동) -->
+            {:else if entry.type === '주말외박' || entry.type === '면회외박'}
               <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
                 <input
@@ -964,7 +964,7 @@
       <div class="flex gap-2">
         <button
           type="button"
-          on:click={() => { deliveryEnabled = true; if (deliveryOrders.length === 0) deliveryOrders = [{ date: reportDate, type: '', members: [] }]; persistGroup(); }}
+          on:click={() => { deliveryEnabled = true; if (deliveryOrders.length === 0) deliveryOrders = [{ date: reportDate, time: '', type: '', members: [] }]; persistGroup(); }}
           class="{CLS_TOGGLE} {deliveryEnabled ? CLS_ON_BLUE : CLS_OFF}"
         >
           있음
@@ -1011,6 +1011,41 @@
                   on:input={() => persistGroup()}
                   class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
                 />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">시간</span>
+                <div class="flex items-center gap-1">
+                  <select
+                    value={order.time ? order.time.split(':')[0] : ''}
+                    on:change={(e) => {
+                      const h = e.currentTarget.value;
+                      const m = order.time ? order.time.split(':')[1] : '00';
+                      deliveryOrders[origIdx].time = h ? `${h}:${m || '00'}` : '';
+                      deliveryOrders = [...deliveryOrders];
+                      persistGroup();
+                    }}
+                    class="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
+                  >
+                    {#each Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')) as h}
+                      <option value={h}>{h}시</option>
+                    {/each}
+                  </select>
+                  <select
+                    value={order.time ? order.time.split(':')[1] : ''}
+                    on:change={(e) => {
+                      const h = order.time ? order.time.split(':')[0] : '';
+                      const m = e.currentTarget.value;
+                      deliveryOrders[origIdx].time = h ? `${h}:${m || '00'}` : '';
+                      deliveryOrders = [...deliveryOrders];
+                      persistGroup();
+                    }}
+                    class="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
+                  >
+                    {#each ['00', '10', '20', '30', '40', '50'] as m}
+                      <option value={m}>{m}분</option>
+                    {/each}
+                  </select>
+                </div>
               </div>
               <div class="flex flex-col gap-1.5">
                 <span class="text-xs text-slate-500">인원 선택 (중복 가능)</span>

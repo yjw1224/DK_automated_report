@@ -50,7 +50,7 @@ function buildHeader(ctx: BuildCtx): string[] {
 /** 출타 항목의 종료일 계산 (외박은 시작일+1, 외출은 당일) */
 function leaveEndDate(e: { type: string; startDate: string; endDate: string }): Date {
   if (e.type === '휴가') return toDate(e.endDate || e.startDate);
-  if (e.type === '외박') {
+  if (e.type === '주말외박' || e.type === '면회외박') {
     const d = toDate(e.startDate);
     d.setDate(d.getDate() + 1);
     return d;
@@ -84,14 +84,14 @@ function buildLeave(ctx: BuildCtx): string[] {
       const endD = toDate(l.endDate);
       const suffix = startD <= ctx.today && ctx.today <= endD ? '중입니다.' : '예정입니다.';
       lines.push(`${start}~${end} ${s.rank} ${s.name} 휴가 ${suffix}`);
-    } else if (l.type === '외박') {
+    } else if (l.type === '주말외박' || l.type === '면회외박') {
       const startD = toDate(l.startDate);
       const endD = new Date(startD);
       endD.setDate(endD.getDate() + 1);
       const start = shortDate(l.startDate);
       const end = `${endD.getMonth() + 1}/${endD.getDate()}`;
       const suffix = startD <= ctx.today && ctx.today <= endD ? '중입니다.' : '예정입니다.';
-      lines.push(`${start}~${end} ${s.rank} ${s.name} 외박 ${suffix}`);
+      lines.push(`${start}~${end} ${s.rank} ${s.name} ${l.type} ${suffix}`);
     } else {
       const d = shortDate(l.startDate);
       const dateD = toDate(l.startDate);

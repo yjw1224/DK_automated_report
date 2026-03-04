@@ -45,7 +45,7 @@ export interface OutpatientTrait {
 }
 
 // ─── 출타 일정 ────────────────────────────────────────────────────────────────
-export const LEAVE_TYPES = ['휴가', '평일외출', '주말외출', '외박'] as const;
+export const LEAVE_TYPES = ['휴가', '평일외출', '주말외출', '주말외박', '면회외박'] as const;
 export type LeaveType = (typeof LEAVE_TYPES)[number];
 
 export interface LeaveEntry {
@@ -53,7 +53,7 @@ export interface LeaveEntry {
   type: LeaveType;
   /** 시작일 (YYYY-MM-DD) — 휴가·외박은 시작일, 평일외출·주말외출은 당일 */
   startDate: string;
-  /** 종료일 (YYYY-MM-DD) — 휴가·외박만 사용 */
+  /** 종료일 (YYYY-MM-DD) — 휴가만 사용 */
   endDate: string;
 }
 
@@ -70,6 +70,7 @@ export type MilTraining = (typeof MIL_TRAININGS)[number];
 
 export interface DeliveryOrder {
   date: string;
+  time: string;
   type: string;
   members: string[];
 }
