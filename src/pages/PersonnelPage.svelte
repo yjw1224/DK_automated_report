@@ -74,7 +74,8 @@
       milTrainingEnabled,
       milTraining,
       deliveryEnabled,
-      deliveryOrders
+      deliveryOrders,
+      groupNote
     });
   }
 
@@ -121,6 +122,7 @@
   let milTraining: Record<MilTraining, string[]> = { '사격': [], '체력 측정': [], 'TCCC': [], '화생방': [], '정신전력': [] };
   let deliveryEnabled = false;
   let deliveryOrders: DeliveryOrder[] = [];
+  let groupNote = '';
 
   // ── storage ─────────────────────────────────────────────────────────────────
   function storageKey(): string {
@@ -152,6 +154,7 @@
         milTraining = g.milTraining ?? milTraining;
         deliveryEnabled = g.deliveryEnabled ?? deliveryEnabled;
         deliveryOrders = g.deliveryOrders ?? deliveryOrders;
+        groupNote = g.groupNote ?? groupNote;
       } catch {
         // 파싱 실패 시 기본값 유지
       }
@@ -163,7 +166,7 @@
   }
 
   function persistGroup() {
-    localStorage.setItem(groupStorageKey(), JSON.stringify({ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders }));
+    localStorage.setItem(groupStorageKey(), JSON.stringify({ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders, groupNote }));
   }
 
   /** 배열 내 멤버 토글 (있으면 제거, 없으면 추가) */
@@ -770,7 +773,7 @@
         <button
           type="button"
           on:click={saveDraft}
-          class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+          class="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 active:bg-blue-700"
         >
           저장
         </button>
@@ -823,6 +826,18 @@
             <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
           {:else}
             <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                on:click={() => {
+                  const allNames = soldiers.map(s => s.name);
+                  const allSelected = allNames.every(n => civHaircut.members.includes(n));
+                  civHaircut.members = allSelected ? [] : [...allNames];
+                  persistGroup();
+                }}
+                class="{CLS_CHIP} {soldiers.length > 0 && soldiers.every(s => civHaircut.members.includes(s.name)) ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}"
+              >
+                {soldiers.length > 0 && soldiers.every(s => civHaircut.members.includes(s.name)) ? '선택 취소' : '모두 선택'}
+              </button>
               {#each soldiers as soldier}
                 <button
                   type="button"
@@ -848,6 +863,26 @@
           <div class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
             <span class="text-xs font-semibold text-slate-500">{rel}</span>
             <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                on:click={() => {
+                  const allNames = soldiers.map(s => s.name);
+                  const allSelected = allNames.every(n => religion[rel].includes(n));
+                  if (allSelected) {
+                    religion[rel] = [];
+                  } else {
+                    for (const r of RELIGIONS) {
+                      if (r !== rel) religion[r] = religion[r].filter(n => !allNames.includes(n));
+                    }
+                    religion[rel] = [...allNames];
+                  }
+                  religion = { ...religion };
+                  persistGroup();
+                }}
+                class="{CLS_CHIP} {soldiers.length > 0 && soldiers.every(s => religion[rel].includes(s.name)) ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}"
+              >
+                {soldiers.length > 0 && soldiers.every(s => religion[rel].includes(s.name)) ? '선택 취소' : '모두 선택'}
+              </button>
               {#each soldiers as soldier}
                 {@const assigned = RELIGIONS.find((r) => religion[r].includes(soldier.name))}
                 <button
@@ -895,6 +930,19 @@
             <div class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
               <span class="text-xs font-semibold text-slate-500">{cat}</span>
               <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  on:click={() => {
+                    const allNames = soldiers.map(s => s.name);
+                    const allSelected = allNames.every(n => milTraining[cat].includes(n));
+                    milTraining[cat] = allSelected ? [] : [...allNames];
+                    milTraining = { ...milTraining };
+                    persistGroup();
+                  }}
+                  class="{CLS_CHIP} {soldiers.length > 0 && soldiers.every(s => milTraining[cat].includes(s.name)) ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}"
+                >
+                  {soldiers.length > 0 && soldiers.every(s => milTraining[cat].includes(s.name)) ? '선택 취소' : '모두 선택'}
+                </button>
                 {#each soldiers as soldier}
                   <button
                     type="button"
@@ -970,6 +1018,19 @@
                   <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
                 {:else}
                   <div class="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      on:click={() => {
+                        const allNames = soldiers.map(s => s.name);
+                        const allSelected = allNames.every(n => order.members.includes(n));
+                        deliveryOrders[origIdx].members = allSelected ? [] : [...allNames];
+                        deliveryOrders = [...deliveryOrders];
+                        persistGroup();
+                      }}
+                      class="{CLS_CHIP} {soldiers.length > 0 && soldiers.every(s => order.members.includes(s.name)) ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}"
+                    >
+                      {soldiers.length > 0 && soldiers.every(s => order.members.includes(s.name)) ? '선택 취소' : '모두 선택'}
+                    </button>
                     {#each soldiers as soldier}
                       <button
                         type="button"
@@ -993,6 +1054,18 @@
           </button>
         </div>
       {/if}
+    </div>
+
+    <!-- 기타 사항 -->
+    <div class="flex flex-col gap-2">
+      <span class={CLS_SEC_TITLE}>기타 사항</span>
+      <textarea
+        placeholder="기타 사항을 자유롭게 입력하세요."
+        bind:value={groupNote}
+        on:input={() => persistGroup()}
+        rows="3"
+        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-blue-500 placeholder:text-slate-400 focus:ring-2"
+      ></textarea>
     </div>
   </div>
 
@@ -1021,5 +1094,5 @@
   {room}
   {reportDate}
   {slots}
-  group={{ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders }}
+  group={{ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders, groupNote }}
 />

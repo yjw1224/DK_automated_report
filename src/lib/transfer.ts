@@ -9,6 +9,7 @@ export interface GroupSettings {
   milTraining: Record<string, string[]>;
   deliveryEnabled: boolean;
   deliveryOrders: { date: string; type: string; members: string[] }[];
+  groupNote: string;
 }
 
 export interface TransferData {

@@ -18,6 +18,7 @@ export interface GroupSettings {
   milTraining: Record<MilTraining, string[]>;
   deliveryEnabled: boolean;
   deliveryOrders: { date: string; type: string; members: string[] }[];
+  groupNote: string;
 }
 
 export interface MessageContext {
@@ -38,6 +39,7 @@ export const SECTION_ICONS: Record<string, string> = {
   '민간이발': '💈',
   '병기본':   '⬆️',
   '배달 음식':'🍜',
+  '기타 사항':'📝',
 };
 
 export const MIL_CONFIG: Record<MilTraining, { icon: string; label: string }> = {
@@ -138,4 +140,11 @@ export function toBuildCtx(msgCtx: MessageContext): BuildCtx {
     byName: new Map(soldiers.map((s) => [s.name, s])),
     group,
   };
+}
+
+/** 기타 사항 섹션 */
+export function buildNote(ctx: BuildCtx): string[] {
+  const note = ctx.group.groupNote?.trim();
+  if (!note) return [];
+  return ['', note];
 }
