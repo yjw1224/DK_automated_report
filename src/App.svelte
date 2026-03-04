@@ -32,6 +32,11 @@
     const { route, context } = parseHash(window.location.hash);
     currentRoute = route;
 
+    if (route === 'home') {
+      loadFromStorage();
+      return;
+    }
+
     if (context.battery && isBattery(context.battery)) {
       battery = context.battery;
     }

@@ -27,6 +27,12 @@
   function confirmImport() {
     if (!preview) return;
     applyTransferData(preview);
+    // 메인 폼에 불러온 포대/생활관 반영
+    localStorage.setItem('dk-main-form', JSON.stringify({
+      battery: preview.bat,
+      room: preview.rm,
+      reportDate
+    }));
     importSuccess = true;
   }
 
@@ -74,9 +80,9 @@
       <button
         class={`${CLS_TOGGLE} ${CLS_OFF} mt-2 max-w-xs`}
         type="button"
-        on:click={reset}
+        on:click={() => { window.location.hash = '#/'; }}
       >
-        다른 코드 불러오기
+        돌아가기
       </button>
     </div>
   {:else}
@@ -136,8 +142,7 @@
 
         {#if preview.bat !== battery || preview.rm !== room}
           <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            현재 선택: {battery}포대 {room}생활관 → 코드 내 정보: {preview.bat}포대 {preview.rm}생활관.
-            코드의 포대/생활관에 저장됩니다.
+            {battery}포대 {room}생활관 → {preview.bat}포대 {preview.rm}생활관으로 변경합니다.
           </div>
         {/if}
 
