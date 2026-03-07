@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick } from "svelte";
   import {
     ABSENCE_PRESET_REASONS,
     LEAVE_TYPES,
@@ -18,8 +18,8 @@
     type Religion,
     type Slot,
     type Soldier,
-    sortByRank
-  } from '../lib/types';
+    sortByRank,
+  } from "../lib/types";
   import {
     CLS_CHIP,
     CLS_FIELD_ERR,
@@ -30,10 +30,10 @@
     CLS_ON_DARK,
     CLS_ON_ORANGE,
     CLS_SEC_TITLE,
-    CLS_TOGGLE
-  } from '../lib/styles';
-  import { encodeTransferData } from '../lib/transfer';
-  import MessagePreview from '../components/MessagePreview.svelte';
+    CLS_TOGGLE,
+  } from "../lib/styles";
+  import { encodeTransferData } from "../lib/transfer";
+  import MessagePreview from "../components/MessagePreview.svelte";
 
   export let battery: string;
   export let room: string;
@@ -49,8 +49,8 @@
   let selectedIndex: number | null = null;
 
   // 빈 자리용 - 신규 이름 입력
-  let newName = '';
-  let newRank: Rank = '이병';
+  let newName = "";
+  let newRank: Rank = "이병";
   let nameInputEl: HTMLInputElement | null = null;
 
   // 채워진 자리용 - 드래프트 (저장 전 임시 편집값)
@@ -75,27 +75,29 @@
       milTraining,
       deliveryEnabled,
       deliveryOrders,
-      groupNote
+      groupNote,
     });
   }
 
   function showExportFeedback() {
     exportCopied = true;
     if (exportTimer) clearTimeout(exportTimer);
-    exportTimer = setTimeout(() => { exportCopied = false; }, 2500);
+    exportTimer = setTimeout(() => {
+      exportCopied = false;
+    }, 2500);
   }
 
   async function copyTransferCode(code: string) {
     try {
       await navigator.clipboard.writeText(code);
     } catch {
-      const ta = Object.assign(document.createElement('textarea'), {
+      const ta = Object.assign(document.createElement("textarea"), {
         value: code,
-        style: 'position:fixed;opacity:0',
+        style: "position:fixed;opacity:0",
       });
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       ta.remove();
     }
     showExportFeedback();
@@ -109,20 +111,33 @@
         await navigator.share({ text: code });
         return;
       } catch (e: any) {
-        if (e?.name === 'AbortError') return;
+        if (e?.name === "AbortError") return;
       }
     }
     await copyTransferCode(code);
   }
 
   // ── 단체 설정 ────────────────────────────────────────────────────────────────
-  let civHaircut: { enabled: boolean; members: string[] } = { enabled: false, members: [] };
-  let religion: Record<Religion, string[]> = { '기독교': [], '천주교': [], '불교': [] };
+  let civHaircut: { enabled: boolean; members: string[] } = {
+    enabled: false,
+    members: [],
+  };
+  let religion: Record<Religion, string[]> = {
+    기독교: [],
+    천주교: [],
+    불교: [],
+  };
   let milTrainingEnabled = false;
-  let milTraining: Record<MilTraining, string[]> = { '사격': [], '체력 측정': [], 'TCCC': [], '화생방': [], '정신전력': [] };
+  let milTraining: Record<MilTraining, string[]> = {
+    사격: [],
+    "체력 측정": [],
+    TCCC: [],
+    화생방: [],
+    정신전력: [],
+  };
   let deliveryEnabled = false;
   let deliveryOrders: DeliveryOrder[] = [];
-  let groupNote = '';
+  let groupNote = "";
 
   // ── storage ─────────────────────────────────────────────────────────────────
   function storageKey(): string {
@@ -166,7 +181,18 @@
   }
 
   function persistGroup() {
-    localStorage.setItem(groupStorageKey(), JSON.stringify({ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders, groupNote }));
+    localStorage.setItem(
+      groupStorageKey(),
+      JSON.stringify({
+        civHaircut,
+        religion,
+        milTrainingEnabled,
+        milTraining,
+        deliveryEnabled,
+        deliveryOrders,
+        groupNote,
+      }),
+    );
   }
 
   /** 배열 내 멤버 토글 (있으면 제거, 없으면 추가) */
@@ -181,7 +207,8 @@
 
   function toggleReligionMember(rel: Religion, name: string) {
     const inThis = religion[rel].includes(name);
-    for (const r of RELIGIONS) religion[r] = religion[r].filter((n) => n !== name);
+    for (const r of RELIGIONS)
+      religion[r] = religion[r].filter((n) => n !== name);
     if (!inThis) religion[rel] = [...religion[rel], name];
     religion = { ...religion };
     persistGroup();
@@ -194,7 +221,10 @@
   }
 
   function addDeliveryOrder() {
-    deliveryOrders = [...deliveryOrders, { date: reportDate, time: '', type: '', members: [] }];
+    deliveryOrders = [
+      ...deliveryOrders,
+      { date: reportDate, time: "", type: "", members: [] },
+    ];
     persistGroup();
   }
 
@@ -204,7 +234,10 @@
   }
 
   function toggleDeliveryMember(idx: number, name: string) {
-    deliveryOrders[idx].members = toggleMember(deliveryOrders[idx].members, name);
+    deliveryOrders[idx].members = toggleMember(
+      deliveryOrders[idx].members,
+      name,
+    );
     deliveryOrders = [...deliveryOrders];
     persistGroup();
   }
@@ -221,12 +254,13 @@
     if (slot) {
       // 채워진 자리: draft 초기화
       draft = structuredClone(slot);
-      useCustomReason = draft.traits.absence.reason === null && draft.traits.absence.isAbsent;
+      useCustomReason =
+        draft.traits.absence.reason === null && draft.traits.absence.isAbsent;
     } else {
       // 빈 자리: 이름 입력 초기화
       draft = null;
-      newName = '';
-      newRank = '이병';
+      newName = "";
+      newRank = "이병";
       // DOM 업데이트 후 input에 포커스
       await tick();
       nameInputEl?.focus();
@@ -238,21 +272,30 @@
     if (selectedIndex === null) return;
     const trimmed = newName.trim();
     if (!trimmed) return;
-    slots[selectedIndex] = { rank: newRank, name: trimmed, traits: defaultTraits() };
+    slots[selectedIndex] = {
+      rank: newRank,
+      name: trimmed,
+      traits: defaultTraits(),
+    };
     slots = [...slots];
     persist();
     // 추가 후 바로 특성 편집 패널로 전환
     draft = structuredClone(slots[selectedIndex] as Soldier);
     useCustomReason = false;
-    newName = '';
-    newRank = '이병';
+    newName = "";
+    newRank = "이병";
   }
 
   // ── 유효성 검사 ──────────────────────────────────────────────────────────────
   function isDraftValid(d: Soldier): boolean {
-    if (useCustomReason && d.traits.absence.isAbsent && !d.traits.absence.customReason.trim()) return false;
+    if (
+      useCustomReason &&
+      d.traits.absence.isAbsent &&
+      !d.traits.absence.customReason.trim()
+    )
+      return false;
     for (const l of d.traits.leaves) {
-      if (l.type === '휴가') {
+      if (l.type === "휴가") {
         if (!l.startDate || !l.endDate) return false;
         if (l.startDate >= l.endDate) return false;
       } else {
@@ -260,17 +303,31 @@
         if (!l.startDate) return false;
       }
     }
-    if (d.traits.outpatient.hasOutpatient && (!d.traits.outpatient.date || !d.traits.outpatient.place.trim())) return false;
-    if (d.traits.visit.hasVisit && (!d.traits.visit.date || !d.traits.visit.visitor.trim())) return false;
+    if (
+      d.traits.outpatient.hasOutpatient &&
+      (!d.traits.outpatient.date || !d.traits.outpatient.place.trim())
+    )
+      return false;
+    if (
+      d.traits.visit.hasVisit &&
+      (!d.traits.visit.date || !d.traits.visit.visitor.trim())
+    )
+      return false;
     return true;
   }
 
   /** 열외 사유 필드 정리 (저장 직전) */
   function normalizeAbsence(d: Soldier) {
     const a = d.traits.absence;
-    if (!a.isAbsent) { a.reason = null; a.customReason = ''; }
-    else if (useCustomReason) { a.reason = null; }
-    else { a.customReason = ''; if (!a.reason) a.reason = ABSENCE_PRESET_REASONS[0]; }
+    if (!a.isAbsent) {
+      a.reason = null;
+      a.customReason = "";
+    } else if (useCustomReason) {
+      a.reason = null;
+    } else {
+      a.customReason = "";
+      if (!a.reason) a.reason = ABSENCE_PRESET_REASONS[0];
+    }
   }
 
   // ── 드래프트 저장 ────────────────────────────────────────────────────────────
@@ -289,7 +346,7 @@
   function removeSlot() {
     if (selectedIndex === null) return;
     const s = slots[selectedIndex];
-    const label = s ? `${s.rank} ${s.name}` : '이 인원';
+    const label = s ? `${s.rank} ${s.name}` : "이 인원";
     if (!confirm(`${label}을(를) 삭제할까요?`)) return;
     slots[selectedIndex] = null;
     slots = [...slots];
@@ -301,8 +358,8 @@
   function cancel() {
     selectedIndex = null;
     draft = null;
-    newName = '';
-    newRank = '이병';
+    newName = "";
+    newRank = "이병";
     useCustomReason = false;
     saveAttempted = false;
   }
@@ -311,12 +368,12 @@
   function onAbsenceReasonChange(event: Event) {
     if (!draft) return;
     const value = (event.currentTarget as HTMLSelectElement).value;
-    if (value === '__custom__') {
+    if (value === "__custom__") {
       useCustomReason = true;
       draft.traits.absence.reason = null;
     } else {
       useCustomReason = false;
-      draft.traits.absence.customReason = '';
+      draft.traits.absence.customReason = "";
       draft.traits.absence.reason = (value as AbsencePresetReason) || null;
     }
   }
@@ -324,14 +381,16 @@
   // ── 반응형 헬퍼 ─────────────────────────────────────────────────────────────
   function absenceLabel(traits: PersonnelTraits): string {
     const a = traits.absence;
-    if (!a.isAbsent) return '';
+    if (!a.isAbsent) return "";
     if (a.reason) return a.reason;
     if (a.customReason) return a.customReason;
-    return '열외';
+    return "열외";
   }
 
   // ── 반응형 집계 ─────────────────────────────────────────────────────────────
-  $: soldiers = sortByRank(slots.filter((s): s is NonNullable<typeof s> => s !== null));
+  $: soldiers = sortByRank(
+    slots.filter((s): s is NonNullable<typeof s> => s !== null),
+  );
   $: total = soldiers.length;
   $: absentSoldiers = soldiers.filter((s) => s.traits.absence.isAbsent);
   $: absentCount = absentSoldiers.length;
@@ -339,7 +398,7 @@
   $: absenceBreakdown = (() => {
     const map = new Map<string, number>();
     for (const s of absentSoldiers) {
-      const label = absenceLabel(s.traits) || '열외';
+      const label = absenceLabel(s.traits) || "열외";
       map.set(label, (map.get(label) ?? 0) + 1);
     }
     return [...map.entries()].map(([label, count]) => `${label} ${count}`);
@@ -348,22 +407,33 @@
   // 배달 주문 날짜순 정렬 (원본 인덱스 유지)
   $: sortedDeliveryOrders = deliveryOrders
     .map((order, idx) => ({ order, idx }))
-    .sort((a, b) => (a.order.date < b.order.date ? -1 : a.order.date > b.order.date ? 1 : a.idx - b.idx));
+    .sort((a, b) =>
+      a.order.date < b.order.date
+        ? -1
+        : a.order.date > b.order.date
+          ? 1
+          : a.idx - b.idx,
+    );
 
   onMount(load);
 </script>
 
-<section class="mx-auto flex w-full max-w-3xl flex-col gap-6 rounded-2xl bg-white p-8 shadow-sm">
+<section
+  class="mx-auto flex w-full max-w-3xl flex-col gap-6 rounded-2xl bg-white p-8 shadow-sm">
   <header class="flex flex-col gap-1">
     <h2 class="text-xl font-bold">생활관 인원 관리</h2>
     <p class="text-sm text-slate-500">
-      {battery === '본부' ? '본부' : `${battery}포대`} {room}생활관 · {reportDate}
+      {battery === "본부" ? "본부" : `${battery}포대`}
+      {room}생활관 · {reportDate}
     </p>
     <p class="text-sm text-slate-700">
       총원 {total}
       {#if absenceBreakdown.length > 0}
-        열외 {absentCount}<br>
-        열외내용 {absenceBreakdown.join(', ')}{absenceBreakdown.length === 1 || absenceBreakdown.length === 10 ? '를' : '을'} 제외한
+        열외 {absentCount}<br />
+        열외내용 {absenceBreakdown.join(", ")}{absenceBreakdown.length === 1 ||
+        absenceBreakdown.length === 10
+          ? "를"
+          : "을"} 제외한
       {/if}
       현재원 {presentCount}
     </p>
@@ -377,13 +447,12 @@
         on:click={() => selectSlot(i)}
         class="flex h-16 flex-col items-center justify-center rounded-xl border text-sm font-medium transition-colors
           {selectedIndex === i
-            ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-400'
-            : slot
-              ? slot.traits.absence.isAbsent
-                ? 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
-                : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
-              : 'border-dashed border-slate-300 bg-slate-50 text-slate-400 hover:bg-slate-100'}"
-      >
+          ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-400'
+          : slot
+            ? slot.traits.absence.isAbsent
+              ? 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
+              : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+            : 'border-dashed border-slate-300 bg-slate-50 text-slate-400 hover:bg-slate-100'}">
         {#if slot}
           <span>{slot.rank} {slot.name}</span>
           {#if slot.traits.absence.isAbsent}
@@ -400,15 +469,15 @@
 
   <!-- ── 패널: 빈 자리 → 이름 입력 ── -->
   {#if selectedIndex !== null && slots[selectedIndex] === null}
-    <div class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <div
+      class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
         신규 인원 추가 — {selectedIndex + 1}번 자리
       </p>
       <div class="flex gap-2">
         <select
           bind:value={newRank}
-          class="w-20 shrink-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
-        >
+          class="w-20 shrink-0 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none ring-blue-500 focus:ring-2">
           {#each RANKS as rank}
             <option value={rank}>{rank}</option>
           {/each}
@@ -419,22 +488,19 @@
           type="text"
           placeholder="이름 입력"
           bind:value={newName}
-          on:keydown={(e) => e.key === 'Enter' && addSoldier()}
-        />
+          on:keydown={(e) => e.key === "Enter" && addSoldier()} />
       </div>
       <div class="flex gap-2">
         <button
           type="button"
           on:click={addSoldier}
-          class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-        >
+          class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">
           추가
         </button>
         <button
           type="button"
           on:click={cancel}
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
-        >
+          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
           취소
         </button>
       </div>
@@ -443,19 +509,18 @@
 
   <!-- ── 패널: 채워진 자리 → 이름 + 특성 편집 ── -->
   {#if selectedIndex !== null && draft !== null}
-    <div class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <div
+      class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {selectedIndex + 1}번 자리 — {draft.rank} {draft.name}
+        {selectedIndex + 1}번 자리 — {draft.rank}
+        {draft.name}
       </p>
 
       <!-- 계급 -->
       <div class="flex flex-col gap-1.5">
-        <label for="draft-rank" class="text-xs font-semibold text-slate-600">계급</label>
-        <select
-          id="draft-rank"
-          bind:value={draft.rank}
-          class={CLS_INPUT}
-        >
+        <label for="draft-rank" class="text-xs font-semibold text-slate-600"
+          >계급</label>
+        <select id="draft-rank" bind:value={draft.rank} class={CLS_INPUT}>
           {#each RANKS as rank}
             <option value={rank}>{rank}</option>
           {/each}
@@ -464,13 +529,13 @@
 
       <!-- 이름 -->
       <div class="flex flex-col gap-1.5">
-        <label for="draft-name" class="text-xs font-semibold text-slate-600">이름</label>
+        <label for="draft-name" class="text-xs font-semibold text-slate-600"
+          >이름</label>
         <input
           id="draft-name"
           class={CLS_INPUT}
           type="text"
-          bind:value={draft.name}
-        />
+          bind:value={draft.name} />
       </div>
 
       <!-- 특성 1: 열외 여부 -->
@@ -481,16 +546,27 @@
         <div class="flex gap-2">
           <button
             type="button"
-            on:click={() => { if (draft) draft.traits.absence.isAbsent = true; }}
-            class="{CLS_TOGGLE} {draft.traits.absence.isAbsent ? CLS_ON_ORANGE : CLS_OFF}"
-          >
+            on:click={() => {
+              if (draft) draft.traits.absence.isAbsent = true;
+            }}
+            class="{CLS_TOGGLE} {draft.traits.absence.isAbsent
+              ? CLS_ON_ORANGE
+              : CLS_OFF}">
             열외
           </button>
           <button
             type="button"
-            on:click={() => { if (draft) { draft.traits.absence.isAbsent = false; draft.traits.absence.reason = null; draft.traits.absence.customReason = ''; useCustomReason = false; } }}
-            class="{CLS_TOGGLE} {!draft.traits.absence.isAbsent ? CLS_ON_DARK : CLS_OFF}"
-          >
+            on:click={() => {
+              if (draft) {
+                draft.traits.absence.isAbsent = false;
+                draft.traits.absence.reason = null;
+                draft.traits.absence.customReason = "";
+                useCustomReason = false;
+              }
+            }}
+            class="{CLS_TOGGLE} {!draft.traits.absence.isAbsent
+              ? CLS_ON_DARK
+              : CLS_OFF}">
             정상
           </button>
         </div>
@@ -500,10 +576,11 @@
           <div class="flex flex-col gap-2">
             <span class="text-xs text-slate-500">열외 사유</span>
             <select
-              value={useCustomReason ? '__custom__' : (draft.traits.absence.reason ?? ABSENCE_PRESET_REASONS[0])}
+              value={useCustomReason
+                ? "__custom__"
+                : (draft.traits.absence.reason ?? ABSENCE_PRESET_REASONS[0])}
               on:change={onAbsenceReasonChange}
-              class={CLS_INPUT}
-            >
+              class={CLS_INPUT}>
               <option value="__custom__">직접 입력</option>
               {#each ABSENCE_PRESET_REASONS as reason}
                 <option value={reason}>{reason}</option>
@@ -514,12 +591,11 @@
               <input
                 class="rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.absence.customReason.trim()
-                    ? CLS_FIELD_ERR
-                    : CLS_FIELD_OK}"
+                  ? CLS_FIELD_ERR
+                  : CLS_FIELD_OK}"
                 type="text"
                 placeholder="사유 직접 입력"
-                bind:value={draft.traits.absence.customReason}
-              />
+                bind:value={draft.traits.absence.customReason} />
               {#if saveAttempted && !draft.traits.absence.customReason.trim()}
                 <p class="text-xs text-red-500">열외 사유를 입력해 주세요.</p>
               {/if}
@@ -534,9 +610,16 @@
           <span class={CLS_SEC_TITLE}>출타</span>
           <button
             type="button"
-            on:click={() => { if (draft) { draft.traits.leaves = [...draft.traits.leaves, defaultLeaveEntry()]; draft = draft; } }}
-            class="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-500"
-          >
+            on:click={() => {
+              if (draft) {
+                draft.traits.leaves = [
+                  ...draft.traits.leaves,
+                  defaultLeaveEntry(),
+                ];
+                draft = draft;
+              }
+            }}
+            class="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-blue-500">
             + 추가
           </button>
         </div>
@@ -546,15 +629,23 @@
         {/if}
 
         {#each draft.traits.leaves as entry, li (li)}
-          <div class="flex flex-col gap-2 rounded-lg bg-white p-3 border border-slate-200">
+          <div
+            class="flex flex-col gap-2 rounded-lg bg-white p-3 border border-slate-200">
             <!-- 헤더: 번호 + 삭제 -->
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-slate-500">출타 {li + 1}</span>
+              <span class="text-xs font-semibold text-slate-500"
+                >출타 {li + 1}</span>
               <button
                 type="button"
-                on:click={() => { if (draft) { draft.traits.leaves = draft.traits.leaves.filter((_, idx) => idx !== li); draft = draft; } }}
-                class="text-xs text-red-500 hover:text-red-700"
-              >
+                on:click={() => {
+                  if (draft) {
+                    draft.traits.leaves = draft.traits.leaves.filter(
+                      (_, idx) => idx !== li,
+                    );
+                    draft = draft;
+                  }
+                }}
+                class="text-xs text-red-500 hover:text-red-700">
                 삭제
               </button>
             </div>
@@ -564,93 +655,146 @@
               {#each LEAVE_TYPES as lt}
                 <button
                   type="button"
-                  on:click={() => { entry.type = lt; entry.startDate = ''; entry.endDate = ''; draft = draft; }}
-                  class="{CLS_CHIP} {entry.type === lt ? CLS_ON_BLUE : CLS_OFF}"
-                >
+                  on:click={() => {
+                    entry.type = lt;
+                    entry.startDate = "";
+                    entry.endDate = "";
+                    draft = draft;
+                  }}
+                  class="{CLS_CHIP} {entry.type === lt
+                    ? CLS_ON_BLUE
+                    : CLS_OFF}">
                   {lt}
                 </button>
               {/each}
             </div>
 
             <!-- 휴가: 시작일 + 종료일 -->
-            {#if entry.type === '휴가'}
+            {#if entry.type === "휴가"}
               <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">시작</span>
                 <input
                   type="date"
                   bind:value={entry.startDate}
-                  on:change={() => { draft = draft; }}
+                  on:change={() => {
+                    draft = draft;
+                  }}
                   class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
-                    {saveAttempted && !entry.startDate ? CLS_FIELD_ERR : CLS_FIELD_OK}"
-                />
+                    {saveAttempted && !entry.startDate
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" />
               </div>
               <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">종료</span>
                 <input
                   type="date"
                   bind:value={entry.endDate}
-                  min={entry.startDate ? (() => { const d = new Date(entry.startDate + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })() : undefined}
-                  on:change={() => { draft = draft; }}
+                  min={entry.startDate
+                    ? (() => {
+                        const d = new Date(entry.startDate + "T00:00:00");
+                        d.setDate(d.getDate() + 1);
+                        return d.toISOString().slice(0, 10);
+                      })()
+                    : undefined}
+                  on:change={() => {
+                    draft = draft;
+                  }}
                   class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
-                    {saveAttempted && (!entry.endDate || (entry.startDate && entry.startDate >= entry.endDate)) ? CLS_FIELD_ERR : CLS_FIELD_OK}"
-                />
+                    {saveAttempted &&
+                  (!entry.endDate ||
+                    (entry.startDate && entry.startDate >= entry.endDate))
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" />
               </div>
               {#if saveAttempted && (!entry.startDate || !entry.endDate || entry.startDate >= entry.endDate)}
-                <p class="text-xs text-red-500">{entry.startDate && entry.endDate && entry.startDate >= entry.endDate ? '종료일은 시작일 다음 날부터 선택해 주세요.' : '시작일과 종료일을 모두 선택해 주세요.'}</p>
+                <p class="text-xs text-red-500">
+                  {entry.startDate &&
+                  entry.endDate &&
+                  entry.startDate >= entry.endDate
+                    ? "종료일은 시작일 다음 날부터 선택해 주세요."
+                    : "시작일과 종료일을 모두 선택해 주세요."}
+                </p>
               {/if}
               {#if entry.startDate && entry.endDate}
-                {@const nights = Math.round((new Date(entry.endDate + 'T00:00:00').getTime() - new Date(entry.startDate + 'T00:00:00').getTime()) / 86400000)}
+                {@const nights = Math.round(
+                  (new Date(entry.endDate + "T00:00:00").getTime() -
+                    new Date(entry.startDate + "T00:00:00").getTime()) /
+                    86400000,
+                )}
                 <p class="text-center text-xs text-slate-600">
-                  {new Date(entry.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  {new Date(entry.startDate).toLocaleDateString("ko-KR", {
+                    month: "long",
+                    day: "numeric",
+                  })}
                   ~
-                  {new Date(entry.endDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  {new Date(entry.endDate).toLocaleDateString("ko-KR", {
+                    month: "long",
+                    day: "numeric",
+                  })}
                   ({nights}박 {nights + 1}일)
                 </p>
               {/if}
 
-            <!-- 주말외박 / 면회외박: 시작일만 (종료일 = 다음 날 자동) -->
-            {:else if entry.type === '주말외박' || entry.type === '면회외박'}
+              <!-- 주말외박 / 면회외박: 시작일만 (종료일 = 다음 날 자동) -->
+            {:else if entry.type === "주말외박" || entry.type === "면회외박"}
               <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
                 <input
                   type="date"
                   bind:value={entry.startDate}
-                  on:change={() => { draft = draft; }}
+                  on:change={() => {
+                    draft = draft;
+                  }}
                   class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
-                    {saveAttempted && !entry.startDate ? CLS_FIELD_ERR : CLS_FIELD_OK}"
-                />
+                    {saveAttempted && !entry.startDate
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" />
               </div>
               {#if saveAttempted && !entry.startDate}
                 <p class="text-xs text-red-500">날짜를 선택해 주세요.</p>
               {/if}
               {#if entry.startDate}
-                {@const nextDay = new Date(new Date(entry.startDate + 'T00:00:00').getTime() + 86400000)}
+                {@const nextDay = new Date(
+                  new Date(entry.startDate + "T00:00:00").getTime() + 86400000,
+                )}
                 <p class="text-center text-xs text-slate-600">
-                  {new Date(entry.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  {new Date(entry.startDate).toLocaleDateString("ko-KR", {
+                    month: "long",
+                    day: "numeric",
+                  })}
                   ~
-                  {nextDay.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  {nextDay.toLocaleDateString("ko-KR", {
+                    month: "long",
+                    day: "numeric",
+                  })}
                   (1박 2일)
                 </p>
               {/if}
 
-            <!-- 평일외출 / 주말외출: 날짜만 -->
+              <!-- 평일외출 / 주말외출: 날짜만 -->
             {:else}
               <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
                 <input
                   type="date"
                   bind:value={entry.startDate}
-                  on:change={() => { draft = draft; }}
+                  on:change={() => {
+                    draft = draft;
+                  }}
                   class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
-                    {saveAttempted && !entry.startDate ? CLS_FIELD_ERR : CLS_FIELD_OK}"
-                />
+                    {saveAttempted && !entry.startDate
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" />
               </div>
               {#if saveAttempted && !entry.startDate}
                 <p class="text-xs text-red-500">날짜를 선택해 주세요.</p>
               {/if}
               {#if entry.startDate}
                 <p class="text-center text-xs text-slate-600">
-                  {new Date(entry.startDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                  {new Date(entry.startDate).toLocaleDateString("ko-KR", {
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </p>
               {/if}
             {/if}
@@ -666,23 +810,34 @@
         <div class="flex gap-2">
           <button
             type="button"
-            on:click={() => { if (draft) draft.traits.outpatient.hasOutpatient = true; }}
-            class="{CLS_TOGGLE} {draft.traits.outpatient.hasOutpatient ? CLS_ON_BLUE : CLS_OFF}"
-          >
+            on:click={() => {
+              if (draft) draft.traits.outpatient.hasOutpatient = true;
+            }}
+            class="{CLS_TOGGLE} {draft.traits.outpatient.hasOutpatient
+              ? CLS_ON_BLUE
+              : CLS_OFF}">
             있음
           </button>
           <button
             type="button"
-            on:click={() => { if (draft) { draft.traits.outpatient.hasOutpatient = false; draft.traits.outpatient.date = ''; draft.traits.outpatient.place = ''; } }}
-            class="{CLS_TOGGLE} {!draft.traits.outpatient.hasOutpatient ? CLS_ON_DARK : CLS_OFF}"
-          >
+            on:click={() => {
+              if (draft) {
+                draft.traits.outpatient.hasOutpatient = false;
+                draft.traits.outpatient.date = "";
+                draft.traits.outpatient.place = "";
+              }
+            }}
+            class="{CLS_TOGGLE} {!draft.traits.outpatient.hasOutpatient
+              ? CLS_ON_DARK
+              : CLS_OFF}">
             없음
           </button>
         </div>
 
         <!-- 날짜 + 장소 (있음일 때만) -->
         {#if draft.traits.outpatient.hasOutpatient}
-          <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+          <div
+            class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
             <div class="flex items-center gap-2">
               <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
               <input
@@ -690,9 +845,8 @@
                 bind:value={draft.traits.outpatient.date}
                 class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.outpatient.date
-                    ? CLS_FIELD_ERR
-                    : CLS_FIELD_OK}"
-              />
+                  ? CLS_FIELD_ERR
+                  : CLS_FIELD_OK}" />
             </div>
             <div class="flex items-center gap-2">
               <span class="w-10 shrink-0 text-xs text-slate-500">장소</span>
@@ -702,12 +856,13 @@
                 bind:value={draft.traits.outpatient.place}
                 class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.outpatient.place.trim()
-                    ? CLS_FIELD_ERR
-                    : CLS_FIELD_OK}"
-              />
+                  ? CLS_FIELD_ERR
+                  : CLS_FIELD_OK}" />
             </div>
             {#if saveAttempted && (!draft.traits.outpatient.date || !draft.traits.outpatient.place.trim())}
-              <p class="text-xs text-red-500">날짜와 장소를 모두 입력해 주세요.</p>
+              <p class="text-xs text-red-500">
+                날짜와 장소를 모두 입력해 주세요.
+              </p>
             {/if}
           </div>
         {/if}
@@ -721,23 +876,34 @@
         <div class="flex gap-2">
           <button
             type="button"
-            on:click={() => { if (draft) draft.traits.visit.hasVisit = true; }}
-            class="{CLS_TOGGLE} {draft.traits.visit.hasVisit ? CLS_ON_BLUE : CLS_OFF}"
-          >
+            on:click={() => {
+              if (draft) draft.traits.visit.hasVisit = true;
+            }}
+            class="{CLS_TOGGLE} {draft.traits.visit.hasVisit
+              ? CLS_ON_BLUE
+              : CLS_OFF}">
             있음
           </button>
           <button
             type="button"
-            on:click={() => { if (draft) { draft.traits.visit.hasVisit = false; draft.traits.visit.date = ''; draft.traits.visit.visitor = ''; } }}
-            class="{CLS_TOGGLE} {!draft.traits.visit.hasVisit ? CLS_ON_DARK : CLS_OFF}"
-          >
+            on:click={() => {
+              if (draft) {
+                draft.traits.visit.hasVisit = false;
+                draft.traits.visit.date = "";
+                draft.traits.visit.visitor = "";
+              }
+            }}
+            class="{CLS_TOGGLE} {!draft.traits.visit.hasVisit
+              ? CLS_ON_DARK
+              : CLS_OFF}">
             없음
           </button>
         </div>
 
         <!-- 날짜 + 면회자 (있음일 때만) -->
         {#if draft.traits.visit.hasVisit}
-          <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+          <div
+            class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
             <div class="flex items-center gap-2">
               <span class="w-12 shrink-0 text-xs text-slate-500">날짜</span>
               <input
@@ -745,9 +911,8 @@
                 bind:value={draft.traits.visit.date}
                 class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.visit.date
-                    ? CLS_FIELD_ERR
-                    : CLS_FIELD_OK}"
-              />
+                  ? CLS_FIELD_ERR
+                  : CLS_FIELD_OK}" />
             </div>
             <div class="flex items-center gap-2">
               <span class="w-12 shrink-0 text-xs text-slate-500">면회자</span>
@@ -757,12 +922,13 @@
                 bind:value={draft.traits.visit.visitor}
                 class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.visit.visitor.trim()
-                    ? CLS_FIELD_ERR
-                    : CLS_FIELD_OK}"
-              />
+                  ? CLS_FIELD_ERR
+                  : CLS_FIELD_OK}" />
             </div>
             {#if saveAttempted && (!draft.traits.visit.date || !draft.traits.visit.visitor.trim())}
-              <p class="text-xs text-red-500">날짜와 면회자를 모두 입력해 주세요.</p>
+              <p class="text-xs text-red-500">
+                날짜와 면회자를 모두 입력해 주세요.
+              </p>
             {/if}
           </div>
         {/if}
@@ -773,22 +939,19 @@
         <button
           type="button"
           on:click={saveDraft}
-          class="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 active:bg-blue-700"
-        >
+          class="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 active:bg-blue-700">
           저장
         </button>
         <button
           type="button"
           on:click={removeSlot}
-          class="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
-        >
+          class="rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50">
           삭제
         </button>
         <button
           type="button"
           on:click={cancel}
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
-        >
+          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
           취소
         </button>
       </div>
@@ -796,8 +959,11 @@
   {/if}
 
   <!-- ── 단체 설정 ── -->
-  <div class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
-    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">단체 설정</p>
+  <div
+    class="flex flex-col gap-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      단체 설정
+    </p>
 
     <!-- 민간 이발 -->
     <div class="flex flex-col gap-2">
@@ -805,22 +971,28 @@
       <div class="flex gap-2">
         <button
           type="button"
-          on:click={() => { civHaircut.enabled = true; persistGroup(); }}
-          class="{CLS_TOGGLE} {civHaircut.enabled ? CLS_ON_BLUE : CLS_OFF}"
-        >
+          on:click={() => {
+            civHaircut.enabled = true;
+            persistGroup();
+          }}
+          class="{CLS_TOGGLE} {civHaircut.enabled ? CLS_ON_BLUE : CLS_OFF}">
           있음
         </button>
         <button
           type="button"
-          on:click={() => { civHaircut.enabled = false; civHaircut.members = []; persistGroup(); }}
-          class="{CLS_TOGGLE} {!civHaircut.enabled ? CLS_ON_DARK : CLS_OFF}"
-        >
+          on:click={() => {
+            civHaircut.enabled = false;
+            civHaircut.members = [];
+            persistGroup();
+          }}
+          class="{CLS_TOGGLE} {!civHaircut.enabled ? CLS_ON_DARK : CLS_OFF}">
           없음
         </button>
       </div>
 
       {#if civHaircut.enabled}
-        <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+        <div
+          class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
           <span class="text-xs text-slate-500">해당 인원 선택 (중복 가능)</span>
           {#if soldiers.length === 0}
             <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
@@ -829,21 +1001,29 @@
               <button
                 type="button"
                 on:click={() => {
-                  const allNames = soldiers.map(s => s.name);
-                  const allSelected = allNames.every(n => civHaircut.members.includes(n));
+                  const allNames = soldiers.map((s) => s.name);
+                  const allSelected = allNames.every((n) =>
+                    civHaircut.members.includes(n),
+                  );
                   civHaircut.members = allSelected ? [] : [...allNames];
                   persistGroup();
                 }}
-                class="{CLS_CHIP} {soldiers.length > 0 && soldiers.every(s => civHaircut.members.includes(s.name)) ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}"
-              >
-                {soldiers.length > 0 && soldiers.every(s => civHaircut.members.includes(s.name)) ? '선택 취소' : '모두 선택'}
+                class="{CLS_CHIP} {soldiers.length > 0 &&
+                soldiers.every((s) => civHaircut.members.includes(s.name))
+                  ? 'border-slate-700 bg-slate-800 text-white'
+                  : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}">
+                {soldiers.length > 0 &&
+                soldiers.every((s) => civHaircut.members.includes(s.name))
+                  ? "선택 취소"
+                  : "모두 선택"}
               </button>
               {#each soldiers as soldier}
                 <button
                   type="button"
                   on:click={() => toggleCivHaircutMember(soldier.name)}
-                  class="{CLS_CHIP} {civHaircut.members.includes(soldier.name) ? CLS_ON_BLUE : CLS_OFF}"
-                >
+                  class="{CLS_CHIP} {civHaircut.members.includes(soldier.name)
+                    ? CLS_ON_BLUE
+                    : CLS_OFF}">
                   {soldier.name}
                 </button>
               {/each}
@@ -860,40 +1040,52 @@
         <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
       {:else}
         {#each RELIGIONS as rel}
-          <div class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
+          <div
+            class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
             <span class="text-xs font-semibold text-slate-500">{rel}</span>
             <div class="flex flex-wrap gap-2">
               <button
                 type="button"
                 on:click={() => {
-                  const allNames = soldiers.map(s => s.name);
-                  const allSelected = allNames.every(n => religion[rel].includes(n));
+                  const allNames = soldiers.map((s) => s.name);
+                  const allSelected = allNames.every((n) =>
+                    religion[rel].includes(n),
+                  );
                   if (allSelected) {
                     religion[rel] = [];
                   } else {
                     for (const r of RELIGIONS) {
-                      if (r !== rel) religion[r] = religion[r].filter(n => !allNames.includes(n));
+                      if (r !== rel)
+                        religion[r] = religion[r].filter(
+                          (n) => !allNames.includes(n),
+                        );
                     }
                     religion[rel] = [...allNames];
                   }
                   religion = { ...religion };
                   persistGroup();
                 }}
-                class="{CLS_CHIP} {soldiers.length > 0 && soldiers.every(s => religion[rel].includes(s.name)) ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}"
-              >
-                {soldiers.length > 0 && soldiers.every(s => religion[rel].includes(s.name)) ? '선택 취소' : '모두 선택'}
+                class="{CLS_CHIP} {soldiers.length > 0 &&
+                soldiers.every((s) => religion[rel].includes(s.name))
+                  ? 'border-slate-700 bg-slate-800 text-white'
+                  : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}">
+                {soldiers.length > 0 &&
+                soldiers.every((s) => religion[rel].includes(s.name))
+                  ? "선택 취소"
+                  : "모두 선택"}
               </button>
               {#each soldiers as soldier}
-                {@const assigned = RELIGIONS.find((r) => religion[r].includes(soldier.name))}
+                {@const assigned = RELIGIONS.find((r) =>
+                  religion[r].includes(soldier.name),
+                )}
                 <button
                   type="button"
                   on:click={() => toggleReligionMember(rel, soldier.name)}
                   class="{CLS_CHIP} {religion[rel].includes(soldier.name)
-                      ? CLS_ON_BLUE
-                      : assigned
-                        ? 'border-slate-200 bg-slate-100 text-slate-300'
-                        : CLS_OFF}"
-                >
+                    ? CLS_ON_BLUE
+                    : assigned
+                      ? 'border-slate-200 bg-slate-100 text-slate-300'
+                      : CLS_OFF}">
                   {soldier.name}
                 </button>
               {/each}
@@ -908,16 +1100,22 @@
       <div class="flex gap-2">
         <button
           type="button"
-          on:click={() => { milTrainingEnabled = true; persistGroup(); }}
-          class="{CLS_TOGGLE} {milTrainingEnabled ? CLS_ON_BLUE : CLS_OFF}"
-        >
+          on:click={() => {
+            milTrainingEnabled = true;
+            persistGroup();
+          }}
+          class="{CLS_TOGGLE} {milTrainingEnabled ? CLS_ON_BLUE : CLS_OFF}">
           있음
         </button>
         <button
           type="button"
-          on:click={() => { milTrainingEnabled = false; MIL_TRAININGS.forEach((c) => milTraining[c] = []); milTraining = { ...milTraining }; persistGroup(); }}
-          class="{CLS_TOGGLE} {!milTrainingEnabled ? CLS_ON_DARK : CLS_OFF}"
-        >
+          on:click={() => {
+            milTrainingEnabled = false;
+            MIL_TRAININGS.forEach((c) => (milTraining[c] = []));
+            milTraining = { ...milTraining };
+            persistGroup();
+          }}
+          class="{CLS_TOGGLE} {!milTrainingEnabled ? CLS_ON_DARK : CLS_OFF}">
           없음
         </button>
       </div>
@@ -927,28 +1125,37 @@
           <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
         {:else}
           {#each MIL_TRAININGS as cat}
-            <div class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
+            <div
+              class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
               <span class="text-xs font-semibold text-slate-500">{cat}</span>
               <div class="flex flex-wrap gap-2">
                 <button
                   type="button"
                   on:click={() => {
-                    const allNames = soldiers.map(s => s.name);
-                    const allSelected = allNames.every(n => milTraining[cat].includes(n));
+                    const allNames = soldiers.map((s) => s.name);
+                    const allSelected = allNames.every((n) =>
+                      milTraining[cat].includes(n),
+                    );
                     milTraining[cat] = allSelected ? [] : [...allNames];
                     milTraining = { ...milTraining };
                     persistGroup();
                   }}
-                  class="{CLS_CHIP} {soldiers.length > 0 && soldiers.every(s => milTraining[cat].includes(s.name)) ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}"
-                >
-                  {soldiers.length > 0 && soldiers.every(s => milTraining[cat].includes(s.name)) ? '선택 취소' : '모두 선택'}
+                  class="{CLS_CHIP} {soldiers.length > 0 &&
+                  soldiers.every((s) => milTraining[cat].includes(s.name))
+                    ? 'border-slate-700 bg-slate-800 text-white'
+                    : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}">
+                  {soldiers.length > 0 &&
+                  soldiers.every((s) => milTraining[cat].includes(s.name))
+                    ? "선택 취소"
+                    : "모두 선택"}
                 </button>
                 {#each soldiers as soldier}
                   <button
                     type="button"
                     on:click={() => toggleMilTrainingMember(cat, soldier.name)}
-                    class="{CLS_CHIP} {milTraining[cat].includes(soldier.name) ? CLS_ON_BLUE : CLS_OFF}"
-                  >
+                    class="{CLS_CHIP} {milTraining[cat].includes(soldier.name)
+                      ? CLS_ON_BLUE
+                      : CLS_OFF}">
                     {soldier.name}
                   </button>
                 {/each}
@@ -964,16 +1171,25 @@
       <div class="flex gap-2">
         <button
           type="button"
-          on:click={() => { deliveryEnabled = true; if (deliveryOrders.length === 0) deliveryOrders = [{ date: reportDate, time: '', type: '', members: [] }]; persistGroup(); }}
-          class="{CLS_TOGGLE} {deliveryEnabled ? CLS_ON_BLUE : CLS_OFF}"
-        >
+          on:click={() => {
+            deliveryEnabled = true;
+            if (deliveryOrders.length === 0)
+              deliveryOrders = [
+                { date: reportDate, time: "", type: "", members: [] },
+              ];
+            persistGroup();
+          }}
+          class="{CLS_TOGGLE} {deliveryEnabled ? CLS_ON_BLUE : CLS_OFF}">
           있음
         </button>
         <button
           type="button"
-          on:click={() => { deliveryEnabled = false; deliveryOrders = []; persistGroup(); }}
-          class="{CLS_TOGGLE} {!deliveryEnabled ? CLS_ON_DARK : CLS_OFF}"
-        >
+          on:click={() => {
+            deliveryEnabled = false;
+            deliveryOrders = [];
+            persistGroup();
+          }}
+          class="{CLS_TOGGLE} {!deliveryEnabled ? CLS_ON_DARK : CLS_OFF}">
           없음
         </button>
       </div>
@@ -981,14 +1197,15 @@
       {#if deliveryEnabled}
         <div class="flex flex-col gap-3">
           {#each sortedDeliveryOrders as { order, idx: origIdx }}
-            <div class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+            <div
+              class="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">주문 {origIdx + 1}</span>
+                <span class="text-xs font-semibold text-slate-500"
+                  >주문 {origIdx + 1}</span>
                 <button
                   type="button"
                   on:click={() => removeDeliveryOrder(origIdx)}
-                  class="text-xs font-semibold text-red-400 hover:text-red-600"
-                >
+                  class="text-xs font-semibold text-red-400 hover:text-red-600">
                   삭제
                 </button>
               </div>
@@ -998,8 +1215,7 @@
                   type="date"
                   bind:value={order.date}
                   on:change={() => persistGroup()}
-                  class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
-                />
+                  class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2" />
               </div>
               <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">종류</span>
@@ -1009,46 +1225,48 @@
                   placeholder="음식 종류 입력"
                   bind:value={order.type}
                   on:input={() => persistGroup()}
-                  class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
-                />
+                  class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2" />
               </div>
               <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">시간</span>
                 <div class="flex items-center gap-1">
                   <select
-                    value={order.time ? order.time.split(':')[0] : ''}
+                    value={order.time ? order.time.split(":")[0] : ""}
                     on:change={(e) => {
                       const h = e.currentTarget.value;
-                      const m = order.time ? order.time.split(':')[1] : '00';
-                      deliveryOrders[origIdx].time = h ? `${h}:${m || '00'}` : '';
+                      const m = order.time ? order.time.split(":")[1] : "00";
+                      deliveryOrders[origIdx].time = h
+                        ? `${h}:${m || "00"}`
+                        : "";
                       deliveryOrders = [...deliveryOrders];
                       persistGroup();
                     }}
-                    class="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
-                  >
-                    {#each Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')) as h}
+                    class="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2">
+                    {#each Array.from( { length: 24 }, (_, i) => String(i).padStart(2, "0"), ) as h}
                       <option value={h}>{h}시</option>
                     {/each}
                   </select>
                   <select
-                    value={order.time ? order.time.split(':')[1] : ''}
+                    value={order.time ? order.time.split(":")[1] : ""}
                     on:change={(e) => {
-                      const h = order.time ? order.time.split(':')[0] : '';
+                      const h = order.time ? order.time.split(":")[0] : "";
                       const m = e.currentTarget.value;
-                      deliveryOrders[origIdx].time = h ? `${h}:${m || '00'}` : '';
+                      deliveryOrders[origIdx].time = h
+                        ? `${h}:${m || "00"}`
+                        : "";
                       deliveryOrders = [...deliveryOrders];
                       persistGroup();
                     }}
-                    class="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2"
-                  >
-                    {#each ['00', '10', '20', '30', '40', '50'] as m}
+                    class="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none ring-blue-500 focus:ring-2">
+                    {#each ["00", "10", "20", "30", "40", "50"] as m}
                       <option value={m}>{m}분</option>
                     {/each}
                   </select>
                 </div>
               </div>
               <div class="flex flex-col gap-1.5">
-                <span class="text-xs text-slate-500">인원 선택 (중복 가능)</span>
+                <span class="text-xs text-slate-500"
+                  >인원 선택 (중복 가능)</span>
                 {#if soldiers.length === 0}
                   <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
                 {:else}
@@ -1056,22 +1274,33 @@
                     <button
                       type="button"
                       on:click={() => {
-                        const allNames = soldiers.map(s => s.name);
-                        const allSelected = allNames.every(n => order.members.includes(n));
-                        deliveryOrders[origIdx].members = allSelected ? [] : [...allNames];
+                        const allNames = soldiers.map((s) => s.name);
+                        const allSelected = allNames.every((n) =>
+                          order.members.includes(n),
+                        );
+                        deliveryOrders[origIdx].members = allSelected
+                          ? []
+                          : [...allNames];
                         deliveryOrders = [...deliveryOrders];
                         persistGroup();
                       }}
-                      class="{CLS_CHIP} {soldiers.length > 0 && soldiers.every(s => order.members.includes(s.name)) ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}"
-                    >
-                      {soldiers.length > 0 && soldiers.every(s => order.members.includes(s.name)) ? '선택 취소' : '모두 선택'}
+                      class="{CLS_CHIP} {soldiers.length > 0 &&
+                      soldiers.every((s) => order.members.includes(s.name))
+                        ? 'border-slate-700 bg-slate-800 text-white'
+                        : 'border-slate-400 bg-slate-200 text-slate-700 hover:bg-slate-300'}">
+                      {soldiers.length > 0 &&
+                      soldiers.every((s) => order.members.includes(s.name))
+                        ? "선택 취소"
+                        : "모두 선택"}
                     </button>
                     {#each soldiers as soldier}
                       <button
                         type="button"
-                        on:click={() => toggleDeliveryMember(origIdx, soldier.name)}
-                        class="{CLS_CHIP} {order.members.includes(soldier.name) ? CLS_ON_BLUE : CLS_OFF}"
-                      >
+                        on:click={() =>
+                          toggleDeliveryMember(origIdx, soldier.name)}
+                        class="{CLS_CHIP} {order.members.includes(soldier.name)
+                          ? CLS_ON_BLUE
+                          : CLS_OFF}">
                         {soldier.name}
                       </button>
                     {/each}
@@ -1083,8 +1312,7 @@
           <button
             type="button"
             on:click={addDeliveryOrder}
-            class="rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50"
-          >
+            class="rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50">
             + 주문 추가
           </button>
         </div>
@@ -1108,8 +1336,7 @@
   <button
     type="button"
     on:click={() => (showMessagePreview = true)}
-    class="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-bold text-white shadow-sm transition-colors hover:bg-blue-500 active:bg-blue-700"
-  >
+    class="w-full rounded-xl bg-blue-600 px-4 py-3 text-base font-bold text-white shadow-sm transition-colors hover:bg-blue-500 active:bg-blue-700">
     📋 메시지 생성하기
   </button>
 
@@ -1117,9 +1344,10 @@
   <button
     type="button"
     on:click={exportTransferCode}
-    class="w-full rounded-xl border-2 {exportCopied ? 'border-green-400 bg-green-50 text-green-700' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'} px-4 py-3 text-base font-bold shadow-sm transition-colors"
-  >
-    {exportCopied ? '✅ 클립보드에 복사됨!' : '📤 인수인계 코드 공유'}
+    class="w-full rounded-xl border-2 {exportCopied
+      ? 'border-green-400 bg-green-50 text-green-700'
+      : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'} px-4 py-3 text-base font-bold shadow-sm transition-colors">
+    {exportCopied ? "✅ 클립보드에 복사됨!" : "📤 인수인계 코드 공유"}
   </button>
 </section>
 
@@ -1129,5 +1357,12 @@
   {room}
   {reportDate}
   {slots}
-  group={{ civHaircut, religion, milTrainingEnabled, milTraining, deliveryEnabled, deliveryOrders, groupNote }}
-/>
+  group={{
+    civHaircut,
+    religion,
+    milTrainingEnabled,
+    milTraining,
+    deliveryEnabled,
+    deliveryOrders,
+    groupNote,
+  }} />
