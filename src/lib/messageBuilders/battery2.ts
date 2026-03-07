@@ -177,7 +177,7 @@ function buildDelivery(ctx: BuildCtx): string[] {
   if (!group.deliveryEnabled || group.deliveryOrders.length === 0) return [];
 
   const valid = [...group.deliveryOrders]
-    .filter((o) => o.date && o.type && o.members.length > 0)
+    .filter((o) => o.date && o.type && o.members.length > 0 && toDate(o.date) >= ctx.today)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (valid.length === 0) return [];
