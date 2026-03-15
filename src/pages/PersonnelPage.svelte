@@ -35,6 +35,8 @@
   import { encodeTransferData } from "../lib/transfer";
   import MessagePreview from "../components/MessagePreview.svelte";
 
+  import { swipeSelect } from "../lib/swipeSelect";
+
   export let battery: string;
   export let room: string;
   export let reportDate: string;
@@ -59,6 +61,8 @@
   let useCustomReason = false;
   // 저장 시도 여부 (유효성 표시용)
   let saveAttempted = false;
+  // 사용자 수동 열외 변경 여부 (자동 채우기 방지용)
+  let absenceTouched = false;
 
   // 메시지 미리보기 모달
   let showMessagePreview = false;
@@ -195,27 +199,120 @@
     );
   }
 
-  /** 배열 내 멤버 토글 (있으면 제거, 없으면 추가) */
-  function toggleMember(arr: string[], name: string): string[] {
-    return arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name];
+  function resolveAutoAbsenceReason(leaves: LeaveEntry[], baseDate: string): AbsencePresetReason | null {
+    for (const l of leaves) {
+      if (l.type === "휴가") {
+        if (l.startDate && l.endDate && baseDate >= l.startDate && baseDate <= l.endDate) {
+          return "휴가";
+        }
+      } else if (l.type === "평일외출" || l.type === "주말외출") {
+        if (l.startDate && baseDate === l.startDate) {
+          return "외출";
+        }
+      } else if (l.type === "평일외박" || l.type === "주말외박" || l.type === "면회외박") {
+        if (l.startDate) {
+          const startD = new Date(l.startDate + "T00:00:00");
+          startD.setDate(startD.getDate() + 1);
+          const nextDStr = `${startD.getFullYear()}-${String(startD.getMonth() + 1).padStart(2, "0")}-${String(startD.getDate()).padStart(2, "0")}`;
+          if (baseDate === l.startDate || baseDate === nextDStr) {
+            return "외박";
+          }
+        }
+      }
+    }
+    return null;
   }
 
-  function toggleCivHaircutMember(name: string) {
-    civHaircut.members = toggleMember(civHaircut.members, name);
+  function applyAutoAbsenceToAllSlots() {
+    let changed = false;
+    const nextSlots: Slot[] = slots.map((slot) => {
+      if (!slot) return null;
+
+      const autoAbsence = resolveAutoAbsenceReason(slot.traits.leaves, reportDate);
+      const prevAbsence = slot.traits.absence;
+
+      if (autoAbsence) {
+        if (
+          prevAbsence.isAbsent &&
+          prevAbsence.reason === autoAbsence &&
+          prevAbsence.customReason === ""
+        ) {
+          return slot;
+        }
+        const next = structuredClone(slot);
+        next.traits.absence.isAbsent = true;
+        next.traits.absence.reason = autoAbsence;
+        next.traits.absence.customReason = "";
+        changed = true;
+        return next;
+      }
+
+      if (
+        !prevAbsence.isAbsent &&
+        prevAbsence.reason === null &&
+        prevAbsence.customReason === ""
+      ) {
+        return slot;
+      }
+
+      const next = structuredClone(slot);
+      next.traits.absence.isAbsent = false;
+      next.traits.absence.reason = null;
+      next.traits.absence.customReason = "";
+      changed = true;
+      return next;
+    });
+
+    if (changed) {
+      slots = nextSlots;
+      persist();
+
+      if (selectedIndex !== null && !absenceTouched) {
+        const selected = slots[selectedIndex];
+        if (selected) {
+          draft = structuredClone(selected);
+          useCustomReason =
+            draft.traits.absence.reason === null && draft.traits.absence.isAbsent;
+        }
+      }
+    }
+  }
+
+  /** 배열 내 멤버 토글 (있으면 제거, 없으면 추가) */
+  function toggleMember(arr: string[], name: string, forceState?: boolean): string[] {
+    const isMember = arr.includes(name);
+    if (forceState !== undefined) {
+      if (forceState && !isMember) return [...arr, name];
+      if (!forceState && isMember) return arr.filter((n) => n !== name);
+      return arr;
+    }
+    return isMember ? arr.filter((n) => n !== name) : [...arr, name];
+  }
+
+  function toggleCivHaircutMember(name: string, forceState?: boolean) {
+    civHaircut.members = toggleMember(civHaircut.members, name, forceState);
     persistGroup();
   }
 
-  function toggleReligionMember(rel: Religion, name: string) {
+  function toggleReligionMember(rel: Religion, name: string, forceState?: boolean) {
     const inThis = religion[rel].includes(name);
-    for (const r of RELIGIONS)
-      religion[r] = religion[r].filter((n) => n !== name);
-    if (!inThis) religion[rel] = [...religion[rel], name];
+    if (forceState === false && inThis) {
+      religion[rel] = religion[rel].filter((n) => n !== name);
+    } else if (forceState === true || (forceState === undefined && !inThis)) {
+      for (const r of RELIGIONS)
+        religion[r] = religion[r].filter((n) => n !== name);
+      if (!religion[rel].includes(name)) {
+        religion[rel] = [...religion[rel], name];
+      }
+    } else if (forceState === undefined && inThis) {
+      religion[rel] = religion[rel].filter((n) => n !== name);
+    }
     religion = { ...religion };
     persistGroup();
   }
 
-  function toggleMilTrainingMember(cat: MilTraining, name: string) {
-    milTraining[cat] = toggleMember(milTraining[cat], name);
+  function toggleMilTrainingMember(cat: MilTraining, name: string, forceState?: boolean) {
+    milTraining[cat] = toggleMember(milTraining[cat], name, forceState);
     milTraining = { ...milTraining };
     persistGroup();
   }
@@ -233,10 +330,11 @@
     persistGroup();
   }
 
-  function toggleDeliveryMember(idx: number, name: string) {
+  function toggleDeliveryMember(idx: number, name: string, forceState?: boolean) {
     deliveryOrders[idx].members = toggleMember(
       deliveryOrders[idx].members,
       name,
+      forceState
     );
     deliveryOrders = [...deliveryOrders];
     persistGroup();
@@ -316,6 +414,22 @@
     return true;
   }
 
+  /** 자동 열외 적용 (사유 변경이 수동으로 안 된 경우만) */
+  function applyAutoAbsenceToDraft() {
+    if (!draft || absenceTouched) return;
+
+    const autoAbsence = resolveAutoAbsenceReason(draft.traits.leaves, reportDate);
+
+    if (autoAbsence && draft.traits.absence.reason !== autoAbsence) {
+      draft.traits.absence.isAbsent = true;
+      draft.traits.absence.reason = autoAbsence;
+      draft.traits.absence.customReason = "";
+      useCustomReason = false;
+      // 강제 업데이트를 위해 draft 재할당
+      draft = draft;
+    }
+  }
+
   /** 열외 사유 필드 정리 (저장 직전) */
   function normalizeAbsence(d: Soldier) {
     const a = d.traits.absence;
@@ -362,11 +476,13 @@
     newRank = "이병";
     useCustomReason = false;
     saveAttempted = false;
+    absenceTouched = false;
   }
 
   // ── 열외 사유 셀렉트 변경 ─────────────────────────────────────────────────────
   function onAbsenceReasonChange(event: Event) {
     if (!draft) return;
+    absenceTouched = true;
     const value = (event.currentTarget as HTMLSelectElement).value;
     if (value === "__custom__") {
       useCustomReason = true;
@@ -415,7 +531,17 @@
           : a.idx - b.idx,
     );
 
-  onMount(load);
+  let lastAutoAppliedReportDate = "";
+  $: if (reportDate && reportDate !== lastAutoAppliedReportDate) {
+    lastAutoAppliedReportDate = reportDate;
+    applyAutoAbsenceToAllSlots();
+    applyAutoAbsenceToDraft();
+  }
+
+  onMount(() => {
+    load();
+    applyAutoAbsenceToAllSlots();
+  });
 </script>
 
 <section
@@ -547,6 +673,7 @@
           <button
             type="button"
             on:click={() => {
+              absenceTouched = true;
               if (draft) draft.traits.absence.isAbsent = true;
             }}
             class="{CLS_TOGGLE} {draft.traits.absence.isAbsent
@@ -557,6 +684,7 @@
           <button
             type="button"
             on:click={() => {
+              absenceTouched = true;
               if (draft) {
                 draft.traits.absence.isAbsent = false;
                 draft.traits.absence.reason = null;
@@ -660,6 +788,7 @@
                     entry.startDate = "";
                     entry.endDate = "";
                     draft = draft;
+                    applyAutoAbsenceToDraft();
                   }}
                   class="{CLS_CHIP} {entry.type === lt
                     ? CLS_ON_BLUE
@@ -678,6 +807,7 @@
                   bind:value={entry.startDate}
                   on:change={() => {
                     draft = draft;
+                    applyAutoAbsenceToDraft();
                   }}
                   class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                     {saveAttempted && !entry.startDate
@@ -698,6 +828,7 @@
                     : undefined}
                   on:change={() => {
                     draft = draft;
+                    applyAutoAbsenceToDraft();
                   }}
                   class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                     {saveAttempted &&
@@ -735,8 +866,8 @@
                 </p>
               {/if}
 
-              <!-- 주말외박 / 면회외박: 시작일만 (종료일 = 다음 날 자동) -->
-            {:else if entry.type === "주말외박" || entry.type === "면회외박"}
+              <!-- 평일외박 / 주말외박 / 면회외박: 시작일만 (종료일 = 다음 날 자동) -->
+            {:else if entry.type === "평일외박" || entry.type === "주말외박" || entry.type === "면회외박"}
               <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">날짜</span>
                 <input
@@ -744,6 +875,7 @@
                   bind:value={entry.startDate}
                   on:change={() => {
                     draft = draft;
+                    applyAutoAbsenceToDraft();
                   }}
                   class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                     {saveAttempted && !entry.startDate
@@ -780,6 +912,7 @@
                   bind:value={entry.startDate}
                   on:change={() => {
                     draft = draft;
+                    applyAutoAbsenceToDraft();
                   }}
                   class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                     {saveAttempted && !entry.startDate
@@ -997,7 +1130,11 @@
           {#if soldiers.length === 0}
             <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
           {:else}
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2"
+              use:swipeSelect={{
+                onToggle: (name, forceState) => toggleCivHaircutMember(name, forceState),
+                getState: (name) => civHaircut.members.includes(name)
+              }}>
               <button
                 type="button"
                 on:click={() => {
@@ -1020,6 +1157,7 @@
               {#each soldiers as soldier}
                 <button
                   type="button"
+                  data-name={soldier.name}
                   on:click={() => toggleCivHaircutMember(soldier.name)}
                   class="{CLS_CHIP} {civHaircut.members.includes(soldier.name)
                     ? CLS_ON_BLUE
@@ -1043,7 +1181,11 @@
           <div
             class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
             <span class="text-xs font-semibold text-slate-500">{rel}</span>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2"
+              use:swipeSelect={{
+                onToggle: (name, forceState) => toggleReligionMember(rel, name, forceState),
+                getState: (name) => religion[rel].includes(name)
+              }}>
               <button
                 type="button"
                 on:click={() => {
@@ -1080,6 +1222,7 @@
                 )}
                 <button
                   type="button"
+                  data-name={soldier.name}
                   on:click={() => toggleReligionMember(rel, soldier.name)}
                   class="{CLS_CHIP} {religion[rel].includes(soldier.name)
                     ? CLS_ON_BLUE
@@ -1128,7 +1271,11 @@
             <div
               class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
               <span class="text-xs font-semibold text-slate-500">{cat}</span>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-2"
+                use:swipeSelect={{
+                  onToggle: (name, forceState) => toggleMilTrainingMember(cat, name, forceState),
+                  getState: (name) => milTraining[cat].includes(name)
+                }}>
                 <button
                   type="button"
                   on:click={() => {
@@ -1152,6 +1299,7 @@
                 {#each soldiers as soldier}
                   <button
                     type="button"
+                    data-name={soldier.name}
                     on:click={() => toggleMilTrainingMember(cat, soldier.name)}
                     class="{CLS_CHIP} {milTraining[cat].includes(soldier.name)
                       ? CLS_ON_BLUE
@@ -1270,7 +1418,11 @@
                 {#if soldiers.length === 0}
                   <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
                 {:else}
-                  <div class="flex flex-wrap gap-2">
+                  <div class="flex flex-wrap gap-2"
+                    use:swipeSelect={{
+                      onToggle: (name, forceState) => toggleDeliveryMember(origIdx, name, forceState),
+                      getState: (name) => order.members.includes(name)
+                    }}>
                     <button
                       type="button"
                       on:click={() => {
@@ -1296,6 +1448,7 @@
                     {#each soldiers as soldier}
                       <button
                         type="button"
+                        data-name={soldier.name}
                         on:click={() =>
                           toggleDeliveryMember(origIdx, soldier.name)}
                         class="{CLS_CHIP} {order.members.includes(soldier.name)

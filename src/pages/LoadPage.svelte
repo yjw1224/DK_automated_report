@@ -55,11 +55,44 @@
 </script>
 
 <section class="mx-auto flex w-full max-w-3xl flex-col gap-5 rounded-2xl bg-white p-8 shadow-sm">
-  <header class="flex flex-col gap-1">
-    <h2 class="text-xl font-bold">인수인계 불러오기</h2>
-    <p class="text-sm text-slate-500">
-      전임자가 공유한 인수인계 코드를 아래에 붙여넣으면 인원 정보를 자동으로 불러옵니다.
-    </p>
+  <header class="flex flex-col gap-4 mb-2">
+    <div class="flex flex-col gap-1">
+      <h2 class="text-xl font-bold">인수인계 불러오기</h2>
+      <p class="text-sm text-slate-500">
+        전임자가 공유한 코드를 활용해 기존에 입력된 인원 정보를 그대로 가져옵니다.
+      </p>
+    </div>
+    
+    <div class="flex flex-col items-center gap-4 rounded-xl border border-indigo-100 bg-indigo-50 p-4 sm:flex-row sm:items-start">
+      <div class="flex flex-1 items-start gap-2 w-full">
+        <svg class="h-5 w-5 shrink-0 text-indigo-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="text-sm text-indigo-800 leading-relaxed text-left word-break">
+          <strong class="block mb-1 text-indigo-900">코드는 어디서 얻나요?</strong>
+          <strong>시작하기</strong> 버튼을 클릭하고 <strong>맨 아래</strong>의 <span class="rounded border border-indigo-200 bg-white px-1.5 py-0.5 text-xs font-semibold text-indigo-700">인수인계 코드 공유</span> 버튼을 클릭하면 코드를 복사할 수 있습니다.
+        </div>
+      </div>
+      
+      <!-- 시각적 안내 (미니 스마트폰 와이어프레임) -->
+      <div class="relative flex h-28 w-24 shrink-0 flex-col items-center justify-end overflow-hidden rounded-2xl border-4 border-slate-700 bg-white p-1.5 shadow-md">
+        <!-- 가짜 스크롤 내용 -->
+        <div class="mb-3 flex w-full flex-col gap-1.5 opacity-30">
+          <div class="h-1.5 w-full rounded-full bg-slate-500"></div>
+          <div class="h-1.5 w-4/5 rounded-full bg-slate-500"></div>
+          <div class="h-1.5 w-full rounded-full bg-slate-500"></div>
+          <div class="h-1.5 w-2/3 rounded-full bg-slate-500"></div>
+        </div>
+        
+        <!-- 가짜 버튼 -->
+        <div class="z-10 flex h-5 w-full shrink-0 items-center justify-center rounded-md bg-indigo-600 shadow-sm">
+          <span class="text-[6.5px] font-bold text-white tracking-widest">📤 인수인계 코드 공유</span>
+        </div>
+        
+        <!-- 아이폰 홈 바 느낌 -->
+        <div class="mt-1.5 h-0.5 w-8 rounded-full bg-slate-300"></div>
+      </div>
+    </div>
   </header>
 
   {#if importSuccess && preview}
