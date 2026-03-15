@@ -45,7 +45,7 @@ export interface OutpatientTrait {
 }
 
 // ─── 출타 일정 ────────────────────────────────────────────────────────────────
-export const LEAVE_TYPES = ['휴가', '평일외출', '주말외출', '주말외박', '면회외박'] as const;
+export const LEAVE_TYPES = ['휴가', '평일외출', '주말외출', '평일외박', '주말외박', '면회외박'] as const;
 export type LeaveType = (typeof LEAVE_TYPES)[number];
 
 export interface LeaveEntry {
