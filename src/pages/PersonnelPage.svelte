@@ -35,6 +35,8 @@
   import { encodeTransferData } from "../lib/transfer";
   import MessagePreview from "../components/MessagePreview.svelte";
 
+  import { swipeSelect } from "../lib/swipeSelect";
+
   export let battery: string;
   export let room: string;
   export let reportDate: string;
@@ -196,26 +198,40 @@
   }
 
   /** 배열 내 멤버 토글 (있으면 제거, 없으면 추가) */
-  function toggleMember(arr: string[], name: string): string[] {
-    return arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name];
+  function toggleMember(arr: string[], name: string, forceState?: boolean): string[] {
+    const isMember = arr.includes(name);
+    if (forceState !== undefined) {
+      if (forceState && !isMember) return [...arr, name];
+      if (!forceState && isMember) return arr.filter((n) => n !== name);
+      return arr;
+    }
+    return isMember ? arr.filter((n) => n !== name) : [...arr, name];
   }
 
-  function toggleCivHaircutMember(name: string) {
-    civHaircut.members = toggleMember(civHaircut.members, name);
+  function toggleCivHaircutMember(name: string, forceState?: boolean) {
+    civHaircut.members = toggleMember(civHaircut.members, name, forceState);
     persistGroup();
   }
 
-  function toggleReligionMember(rel: Religion, name: string) {
+  function toggleReligionMember(rel: Religion, name: string, forceState?: boolean) {
     const inThis = religion[rel].includes(name);
-    for (const r of RELIGIONS)
-      religion[r] = religion[r].filter((n) => n !== name);
-    if (!inThis) religion[rel] = [...religion[rel], name];
+    if (forceState === false && inThis) {
+      religion[rel] = religion[rel].filter((n) => n !== name);
+    } else if (forceState === true || (forceState === undefined && !inThis)) {
+      for (const r of RELIGIONS)
+        religion[r] = religion[r].filter((n) => n !== name);
+      if (!religion[rel].includes(name)) {
+        religion[rel] = [...religion[rel], name];
+      }
+    } else if (forceState === undefined && inThis) {
+      religion[rel] = religion[rel].filter((n) => n !== name);
+    }
     religion = { ...religion };
     persistGroup();
   }
 
-  function toggleMilTrainingMember(cat: MilTraining, name: string) {
-    milTraining[cat] = toggleMember(milTraining[cat], name);
+  function toggleMilTrainingMember(cat: MilTraining, name: string, forceState?: boolean) {
+    milTraining[cat] = toggleMember(milTraining[cat], name, forceState);
     milTraining = { ...milTraining };
     persistGroup();
   }
@@ -233,10 +249,11 @@
     persistGroup();
   }
 
-  function toggleDeliveryMember(idx: number, name: string) {
+  function toggleDeliveryMember(idx: number, name: string, forceState?: boolean) {
     deliveryOrders[idx].members = toggleMember(
       deliveryOrders[idx].members,
       name,
+      forceState
     );
     deliveryOrders = [...deliveryOrders];
     persistGroup();
@@ -997,7 +1014,11 @@
           {#if soldiers.length === 0}
             <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
           {:else}
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2"
+              use:swipeSelect={{
+                onToggle: (name, forceState) => toggleCivHaircutMember(name, forceState),
+                getState: (name) => civHaircut.members.includes(name)
+              }}>
               <button
                 type="button"
                 on:click={() => {
@@ -1020,6 +1041,7 @@
               {#each soldiers as soldier}
                 <button
                   type="button"
+                  data-name={soldier.name}
                   on:click={() => toggleCivHaircutMember(soldier.name)}
                   class="{CLS_CHIP} {civHaircut.members.includes(soldier.name)
                     ? CLS_ON_BLUE
@@ -1043,7 +1065,11 @@
           <div
             class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
             <span class="text-xs font-semibold text-slate-500">{rel}</span>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2"
+              use:swipeSelect={{
+                onToggle: (name, forceState) => toggleReligionMember(rel, name, forceState),
+                getState: (name) => religion[rel].includes(name)
+              }}>
               <button
                 type="button"
                 on:click={() => {
@@ -1080,6 +1106,7 @@
                 )}
                 <button
                   type="button"
+                  data-name={soldier.name}
                   on:click={() => toggleReligionMember(rel, soldier.name)}
                   class="{CLS_CHIP} {religion[rel].includes(soldier.name)
                     ? CLS_ON_BLUE
@@ -1128,7 +1155,11 @@
             <div
               class="flex flex-col gap-1.5 rounded-lg border border-slate-200 bg-white p-3">
               <span class="text-xs font-semibold text-slate-500">{cat}</span>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-2"
+                use:swipeSelect={{
+                  onToggle: (name, forceState) => toggleMilTrainingMember(cat, name, forceState),
+                  getState: (name) => milTraining[cat].includes(name)
+                }}>
                 <button
                   type="button"
                   on:click={() => {
@@ -1152,6 +1183,7 @@
                 {#each soldiers as soldier}
                   <button
                     type="button"
+                    data-name={soldier.name}
                     on:click={() => toggleMilTrainingMember(cat, soldier.name)}
                     class="{CLS_CHIP} {milTraining[cat].includes(soldier.name)
                       ? CLS_ON_BLUE
@@ -1270,7 +1302,11 @@
                 {#if soldiers.length === 0}
                   <p class="text-xs text-slate-400">등록된 인원이 없습니다.</p>
                 {:else}
-                  <div class="flex flex-wrap gap-2">
+                  <div class="flex flex-wrap gap-2"
+                    use:swipeSelect={{
+                      onToggle: (name, forceState) => toggleDeliveryMember(origIdx, name, forceState),
+                      getState: (name) => order.members.includes(name)
+                    }}>
                     <button
                       type="button"
                       on:click={() => {
@@ -1296,6 +1332,7 @@
                     {#each soldiers as soldier}
                       <button
                         type="button"
+                        data-name={soldier.name}
                         on:click={() =>
                           toggleDeliveryMember(origIdx, soldier.name)}
                         class="{CLS_CHIP} {order.members.includes(soldier.name)
