@@ -1,7 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import LoadPage from "./pages/LoadPage.svelte";
+  import UpdateLogModal from "./components/UpdateLogModal.svelte";
   import PersonnelPage from "./pages/PersonnelPage.svelte";
+  import {
+    getCurrentReleaseNote,
+    getUpdateLogDismissKey,
+  } from "./lib/release";
   import { buildHash, parseHash, type RouteName } from "./lib/router";
   import { MAIN_FORM_STORAGE_KEY } from "./lib/storageKeys";
   import {
@@ -34,6 +39,12 @@
   let battery: Battery = "1";
   let room: Room = "1";
   let currentRoute: RouteName = "home";
+  let showUpdateLog = false;
+  let dontShowUpdateLog = false;
+  let updateLogReady = false;
+
+  const currentRelease = getCurrentReleaseNote();
+  const UPDATE_LOG_DISMISS_KEY = getUpdateLogDismissKey(currentRelease.version);
 
   function syncFromHash() {
     const { route, context } = parseHash(window.location.hash);
@@ -80,6 +91,11 @@
     reportDate = getTodayIsoDate();
     loadFromStorage();
     syncFromHash();
+    dontShowUpdateLog = localStorage.getItem(UPDATE_LOG_DISMISS_KEY) === "1";
+    updateLogReady = true;
+    if (currentRoute === "home" && !dontShowUpdateLog) {
+      showUpdateLog = true;
+    }
     saveMainForm();
     window.addEventListener("hashchange", syncFromHash);
 
@@ -126,6 +142,18 @@
 
   function goHome() {
     window.location.hash = "#/";
+  }
+
+  function openUpdateLog() {
+    showUpdateLog = true;
+  }
+
+  $: if (updateLogReady) {
+    if (dontShowUpdateLog) {
+      localStorage.setItem(UPDATE_LOG_DISMISS_KEY, "1");
+    } else {
+      localStorage.removeItem(UPDATE_LOG_DISMISS_KEY);
+    }
   }
 </script>
 
@@ -183,7 +211,17 @@
         <button class={CLS_NAV_BTN} type="button" on:click={() => goTo("load")}>
           불러오기
         </button>
-        <p class="text-sm text-slate-500">Made by 윤진우<br />2026-02-26</p>
+        <div class="sm:col-span-2 flex flex-col items-center gap-1 pt-1">
+          <p class="text-sm text-center text-slate-500">
+            Made by 윤진우<br />2026-02-26
+          </p>
+          <button
+            type="button"
+            class="text-xs text-slate-400 hover:text-slate-600"
+            on:click={openUpdateLog}>
+            업데이트 로그
+          </button>
+        </div>
       </div>
     </section>
   {:else if currentRoute === "personnel"}
@@ -200,3 +238,11 @@
     </div>
   {/if}
 </main>
+
+<UpdateLogModal
+  bind:visible={showUpdateLog}
+  bind:dontShowAgain={dontShowUpdateLog}
+  version={currentRelease.version}
+  date={currentRelease.date}
+  message={currentRelease.message}
+/>
