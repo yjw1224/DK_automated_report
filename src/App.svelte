@@ -1,17 +1,31 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import LoadPage from "./pages/LoadPage.svelte";
+  import UpdateLogModal from "./components/UpdateLogModal.svelte";
   import PersonnelPage from "./pages/PersonnelPage.svelte";
+  import {
+    getCurrentReleaseNote,
+    getUpdateLogDismissKey,
+  } from "./lib/release";
   import { buildHash, parseHash, type RouteName } from "./lib/router";
-  import { CLS_ON_DARK, CLS_TOGGLE } from "./lib/styles";
+  import { MAIN_FORM_STORAGE_KEY } from "./lib/storageKeys";
+  import {
+    CLS_BACK_BTN,
+    CLS_INPUT,
+    CLS_LABEL,
+    CLS_NAV_BTN,
+    CLS_ON_DARK,
+    CLS_TOGGLE,
+  } from "./lib/styles";
+  import {
+    BATTERY_OPTIONS,
+    ROOM_OPTIONS,
+    isBattery,
+    isRoom,
+    type Battery,
+    type Room,
+  } from "./lib/types";
   import { startVersionCheck } from "./lib/versionCheck";
-
-  type Battery = "1" | "2" | "3" | "본부";
-  type Room = "1" | "2" | "3";
-
-  const BATTERY_OPTIONS: readonly Battery[] = ["1", "2", "3", "본부"];
-  const ROOM_OPTIONS: readonly Room[] = ["1", "2", "3"];
-  const MAIN_FORM_STORAGE_KEY = "dk-main-form";
 
   function getTodayIsoDate(): string {
     const now = new Date();
@@ -25,11 +39,12 @@
   let battery: Battery = "1";
   let room: Room = "1";
   let currentRoute: RouteName = "home";
+  let showUpdateLog = false;
+  let dontShowUpdateLog = false;
+  let updateLogReady = false;
 
-  const isBattery = (value: string): value is Battery =>
-    BATTERY_OPTIONS.includes(value as Battery);
-  const isRoom = (value: string): value is Room =>
-    ROOM_OPTIONS.includes(value as Room);
+  const currentRelease = getCurrentReleaseNote();
+  const UPDATE_LOG_DISMISS_KEY = getUpdateLogDismissKey(currentRelease.version);
 
   function syncFromHash() {
     const { route, context } = parseHash(window.location.hash);
@@ -76,6 +91,11 @@
     reportDate = getTodayIsoDate();
     loadFromStorage();
     syncFromHash();
+    dontShowUpdateLog = localStorage.getItem(UPDATE_LOG_DISMISS_KEY) === "1";
+    updateLogReady = true;
+    if (currentRoute === "home" && !dontShowUpdateLog) {
+      showUpdateLog = true;
+    }
     saveMainForm();
     window.addEventListener("hashchange", syncFromHash);
 
@@ -124,12 +144,17 @@
     window.location.hash = "#/";
   }
 
-  const CLS_INPUT =
-    "rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2 bg-white text-slate-700";
-  const CLS_LABEL = "flex flex-col gap-2 text-sm font-medium";
-  const CLS_NAV_BTN =
-    "rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100";
-  const CLS_BACK_BTN = `w-full bg-white ${CLS_NAV_BTN}`;
+  function openUpdateLog() {
+    showUpdateLog = true;
+  }
+
+  $: if (updateLogReady) {
+    if (dontShowUpdateLog) {
+      localStorage.setItem(UPDATE_LOG_DISMISS_KEY, "1");
+    } else {
+      localStorage.removeItem(UPDATE_LOG_DISMISS_KEY);
+    }
+  }
 </script>
 
 <main class="min-h-screen bg-slate-50 p-6 text-slate-900">
@@ -186,7 +211,17 @@
         <button class={CLS_NAV_BTN} type="button" on:click={() => goTo("load")}>
           불러오기
         </button>
-        <p class="text-sm text-slate-500">Made by 윤진우<br />2026-02-26</p>
+        <div class="sm:col-span-2 flex flex-col items-center gap-1 pt-1">
+          <p class="text-sm text-center text-slate-500">
+            Made by 윤진우<br />2026-02-26
+          </p>
+          <button
+            type="button"
+            class="text-xs text-slate-400 hover:text-slate-600"
+            on:click={openUpdateLog}>
+            업데이트 로그
+          </button>
+        </div>
       </div>
     </section>
   {:else if currentRoute === "personnel"}
@@ -203,3 +238,11 @@
     </div>
   {/if}
 </main>
+
+<UpdateLogModal
+  bind:visible={showUpdateLog}
+  bind:dontShowAgain={dontShowUpdateLog}
+  version={currentRelease.version}
+  date={currentRelease.date}
+  message={currentRelease.message}
+/>

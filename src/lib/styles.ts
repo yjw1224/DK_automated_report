@@ -31,3 +31,12 @@ export const CLS_FIELD_OK  = 'border-slate-300 ring-blue-500';
 
 /** 유효성 실패 field border+ring */
 export const CLS_FIELD_ERR = 'border-red-400 bg-red-50 ring-red-400';
+
+/** 기본 라벨 레이아웃 */
+export const CLS_LABEL     = 'flex flex-col gap-2 text-sm font-medium';
+
+/** 홈/내비 기본 버튼 */
+export const CLS_NAV_BTN   = 'rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100';
+
+/** 돌아가기 버튼 */
+export const CLS_BACK_BTN  = `w-full bg-white ${CLS_NAV_BTN}`;

@@ -9,13 +9,14 @@
     defaultLeaveEntry,
     defaultTraits,
     type AbsencePresetReason,
+    type Battery,
     type DeliveryOrder,
     type LeaveEntry,
-    type LeaveType,
     type MilTraining,
     type PersonnelTraits,
     type Rank,
     type Religion,
+    type Room,
     type Slot,
     type Soldier,
     sortByRank,
@@ -32,13 +33,14 @@
     CLS_SEC_TITLE,
     CLS_TOGGLE,
   } from "../lib/styles";
+  import { getGroupStorageKey, getPersonnelStorageKey } from "../lib/storageKeys";
   import { encodeTransferData } from "../lib/transfer";
   import MessagePreview from "../components/MessagePreview.svelte";
 
   import { swipeSelect } from "../lib/swipeSelect";
 
-  export let battery: string;
-  export let room: string;
+  export let battery: Battery;
+  export let room: Room;
   export let reportDate: string;
 
   const SLOT_COUNT = 10;
@@ -145,11 +147,11 @@
 
   // ── storage ─────────────────────────────────────────────────────────────────
   function storageKey(): string {
-    return `dk-personnel-${battery}-${room}`;
+    return getPersonnelStorageKey(battery, room);
   }
 
   function groupStorageKey(): string {
-    return `dk-group-${battery}-${room}`;
+    return getGroupStorageKey(battery, room);
   }
 
   function load() {

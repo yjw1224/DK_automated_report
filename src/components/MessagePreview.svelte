@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { buildMessage, type GroupSettings } from '../lib/messageBuilder';
-  import type { Slot } from '../lib/types';
+  import { buildMessage, type GroupSettings } from '../lib/messageBuilders';
+  import type { Battery, Room, Slot } from '../lib/types';
 
-  export let battery: string;
-  export let room: string;
+  export let battery: Battery;
+  export let room: Room;
   export let reportDate: string;
   export let slots: Slot[];
   export let group: GroupSettings;
