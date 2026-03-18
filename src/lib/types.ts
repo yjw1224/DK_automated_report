@@ -3,6 +3,18 @@ export const RANKS = ['병장', '상병', '일병', '이병'] as const;
 
 export type Rank = (typeof RANKS)[number];
 
+export const BATTERY_OPTIONS = ['1', '2', '3', '본부'] as const;
+export type Battery = (typeof BATTERY_OPTIONS)[number];
+export function isBattery(value: string): value is Battery {
+  return (BATTERY_OPTIONS as readonly string[]).includes(value);
+}
+
+export const ROOM_OPTIONS = ['1', '2', '3'] as const;
+export type Room = (typeof ROOM_OPTIONS)[number];
+export function isRoom(value: string): value is Room {
+  return (ROOM_OPTIONS as readonly string[]).includes(value);
+}
+
 // ─── 열외 사유 ────────────────────────────────────────────────────────────────
 export const ABSENCE_PRESET_REASONS = [
   '근무',

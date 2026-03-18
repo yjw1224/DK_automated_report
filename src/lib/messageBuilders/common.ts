@@ -3,6 +3,7 @@
  */
 import type { MilTraining, Rank, Religion, Slot, Soldier } from '../types';
 import { MIL_TRAININGS, RELIGIONS, rankIndex, sortByRank } from '../types';
+import type { Battery, Room } from '../types';
 
 // ─── 포대 식별 ────────────────────────────────────────────────────────────────
 
@@ -22,8 +23,8 @@ export interface GroupSettings {
 }
 
 export interface MessageContext {
-  battery: string;
-  room: string;
+  battery: Battery;
+  room: Room;
   reportDate: string;
   slots: Slot[];
   group: GroupSettings;

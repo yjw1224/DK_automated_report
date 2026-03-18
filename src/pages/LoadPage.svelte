@@ -1,9 +1,11 @@
 <script lang="ts">
   import { decodeTransferData, applyTransferData, type TransferData } from '../lib/transfer';
+  import { MAIN_FORM_STORAGE_KEY } from '../lib/storageKeys';
   import { CLS_INPUT, CLS_ON_DARK, CLS_TOGGLE, CLS_OFF } from '../lib/styles';
+  import type { Battery, Room } from '../lib/types';
 
-  export let battery: string;
-  export let room: string;
+  export let battery: Battery;
+  export let room: Room;
   export let reportDate: string;
 
   let inputCode = '';
@@ -28,7 +30,7 @@
     if (!preview) return;
     applyTransferData(preview);
     // 메인 폼에 불러온 포대/생활관 반영
-    localStorage.setItem('dk-main-form', JSON.stringify({
+    localStorage.setItem(MAIN_FORM_STORAGE_KEY, JSON.stringify({
       battery: preview.bat,
       room: preview.rm,
       reportDate

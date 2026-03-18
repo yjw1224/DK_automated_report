@@ -3,15 +3,24 @@
   import LoadPage from "./pages/LoadPage.svelte";
   import PersonnelPage from "./pages/PersonnelPage.svelte";
   import { buildHash, parseHash, type RouteName } from "./lib/router";
-  import { CLS_ON_DARK, CLS_TOGGLE } from "./lib/styles";
+  import { MAIN_FORM_STORAGE_KEY } from "./lib/storageKeys";
+  import {
+    CLS_BACK_BTN,
+    CLS_INPUT,
+    CLS_LABEL,
+    CLS_NAV_BTN,
+    CLS_ON_DARK,
+    CLS_TOGGLE,
+  } from "./lib/styles";
+  import {
+    BATTERY_OPTIONS,
+    ROOM_OPTIONS,
+    isBattery,
+    isRoom,
+    type Battery,
+    type Room,
+  } from "./lib/types";
   import { startVersionCheck } from "./lib/versionCheck";
-
-  type Battery = "1" | "2" | "3" | "본부";
-  type Room = "1" | "2" | "3";
-
-  const BATTERY_OPTIONS: readonly Battery[] = ["1", "2", "3", "본부"];
-  const ROOM_OPTIONS: readonly Room[] = ["1", "2", "3"];
-  const MAIN_FORM_STORAGE_KEY = "dk-main-form";
 
   function getTodayIsoDate(): string {
     const now = new Date();
@@ -25,11 +34,6 @@
   let battery: Battery = "1";
   let room: Room = "1";
   let currentRoute: RouteName = "home";
-
-  const isBattery = (value: string): value is Battery =>
-    BATTERY_OPTIONS.includes(value as Battery);
-  const isRoom = (value: string): value is Room =>
-    ROOM_OPTIONS.includes(value as Room);
 
   function syncFromHash() {
     const { route, context } = parseHash(window.location.hash);
@@ -123,13 +127,6 @@
   function goHome() {
     window.location.hash = "#/";
   }
-
-  const CLS_INPUT =
-    "rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2 bg-white text-slate-700";
-  const CLS_LABEL = "flex flex-col gap-2 text-sm font-medium";
-  const CLS_NAV_BTN =
-    "rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100";
-  const CLS_BACK_BTN = `w-full bg-white ${CLS_NAV_BTN}`;
 </script>
 
 <main class="min-h-screen bg-slate-50 p-6 text-slate-900">

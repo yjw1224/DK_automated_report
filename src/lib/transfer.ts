@@ -1,4 +1,12 @@
-import { defaultTraits, type PersonnelTraits, type Slot, type Soldier } from './types';
+import {
+  defaultTraits,
+  type Battery,
+  type PersonnelTraits,
+  type Room,
+  type Slot,
+  type Soldier,
+} from './types';
+import { getGroupStorageKey, getPersonnelStorageKey } from './storageKeys';
 
 // ─── 인수인계 데이터 전송 포맷 ──────────────────────────────────────────────
 
@@ -16,9 +24,9 @@ export interface TransferData {
   /** 버전 (향후 호환성용) */
   v: 1;
   /** 포대 */
-  bat: string;
+  bat: Battery;
   /** 생활관 */
-  rm: string;
+  rm: Room;
   /** 인원 슬롯 */
   slots: Slot[];
   /** 단체 설정 */
@@ -141,8 +149,8 @@ function base64ToBytes(b64: string): Uint8Array {
 // ─── 내보내기 (export) ──────────────────────────────────────────────────────
 
 export async function encodeTransferData(
-  battery: string,
-  room: string,
+  battery: Battery,
+  room: Room,
   slots: Slot[],
   group: GroupSettings
 ): Promise<string> {
@@ -191,8 +199,8 @@ export async function decodeTransferData(encoded: string): Promise<ImportResult>
 // ─── localStorage 저장 ──────────────────────────────────────────────────────
 
 export function applyTransferData(data: TransferData): void {
-  const personnelKey = `dk-personnel-${data.bat}-${data.rm}`;
-  const groupKey = `dk-group-${data.bat}-${data.rm}`;
+  const personnelKey = getPersonnelStorageKey(data.bat, data.rm);
+  const groupKey = getGroupStorageKey(data.bat, data.rm);
 
   localStorage.setItem(personnelKey, JSON.stringify(data.slots));
   localStorage.setItem(groupKey, JSON.stringify(data.group));
