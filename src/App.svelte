@@ -3,6 +3,7 @@
   import LoadPage from "./pages/LoadPage.svelte";
   import SettingsPage from "./pages/SettingsPage.svelte";
   import UpdateLogModal from "./components/UpdateLogModal.svelte";
+  import MessagePreview from "./components/MessagePreview.svelte";
   import PersonnelPage from "./pages/PersonnelPage.svelte";
   import {
     getCurrentReleaseNote,
@@ -20,12 +21,17 @@
   } from "./lib/styles";
   import {
     BATTERY_OPTIONS,
+    MIL_TRAININGS,
+    RELIGIONS,
     ROOM_OPTIONS,
     isBattery,
     isRoom,
     type Battery,
     type Room,
+    type Slot,
   } from "./lib/types";
+  import type { GroupSettings } from "./lib/messageBuilders";
+  import { getGroupStorageKey, getPersonnelStorageKey } from "./lib/storageKeys";
   import { ensureAppSettingsInitialized } from "./lib/settings";
   import { startVersionCheck } from "./lib/versionCheck";
 
@@ -45,6 +51,37 @@
   let dontShowUpdateLog = false;
   let updateLogReady = false;
   let showSettings = false;
+  let showQuickMessagePreview = false;
+
+  const SLOT_COUNT = 10;
+
+  let previewSlots: Slot[] = Array(SLOT_COUNT).fill(null);
+
+  function createDefaultPreviewGroup(): GroupSettings {
+    return {
+      civHaircut: { enabled: false, members: [] },
+      religion: RELIGIONS.reduce(
+        (acc, rel) => {
+          acc[rel] = [];
+          return acc;
+        },
+        {} as GroupSettings["religion"],
+      ),
+      milTrainingEnabled: false,
+      milTraining: MIL_TRAININGS.reduce(
+        (acc, cat) => {
+          acc[cat] = [];
+          return acc;
+        },
+        {} as GroupSettings["milTraining"],
+      ),
+      deliveryEnabled: false,
+      deliveryOrders: [],
+      groupNote: "",
+    };
+  }
+
+  let previewGroup: GroupSettings = createDefaultPreviewGroup();
 
   const currentRelease = getCurrentReleaseNote();
   const UPDATE_LOG_DISMISS_KEY = getUpdateLogDismissKey(currentRelease.version);
@@ -160,6 +197,52 @@
     showSettings = false;
   }
 
+  function loadQuickPreviewData() {
+    const defaultSlots: Slot[] = Array(SLOT_COUNT).fill(null);
+    const defaultGroup = createDefaultPreviewGroup();
+
+    try {
+      const personnelRaw = localStorage.getItem(getPersonnelStorageKey(battery, room));
+      if (personnelRaw) {
+        const parsed = JSON.parse(personnelRaw) as Slot[];
+        if (Array.isArray(parsed) && parsed.length === SLOT_COUNT) {
+          previewSlots = parsed;
+        } else {
+          previewSlots = defaultSlots;
+        }
+      } else {
+        previewSlots = defaultSlots;
+      }
+    } catch {
+      previewSlots = defaultSlots;
+    }
+
+    try {
+      const groupRaw = localStorage.getItem(getGroupStorageKey(battery, room));
+      if (groupRaw) {
+        const parsed = JSON.parse(groupRaw) as Partial<GroupSettings>;
+        previewGroup = {
+          ...defaultGroup,
+          ...parsed,
+          civHaircut: parsed.civHaircut ?? defaultGroup.civHaircut,
+          religion: parsed.religion ?? defaultGroup.religion,
+          milTraining: parsed.milTraining ?? defaultGroup.milTraining,
+          deliveryOrders: parsed.deliveryOrders ?? defaultGroup.deliveryOrders,
+        };
+      } else {
+        previewGroup = defaultGroup;
+      }
+    } catch {
+      previewGroup = defaultGroup;
+    }
+  }
+
+  function openQuickMessagePreview() {
+    saveMainForm();
+    loadQuickPreviewData();
+    showQuickMessagePreview = true;
+  }
+
   $: if (updateLogReady) {
     if (dontShowUpdateLog) {
       localStorage.setItem(UPDATE_LOG_DISMISS_KEY, "1");
@@ -228,6 +311,12 @@
           on:click={() => goTo("personnel")}>
           시작하기
         </button>
+        <button
+          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 active:bg-blue-700"
+          type="button"
+          on:click={openQuickMessagePreview}>
+          메시지 생성하기
+        </button>
         <button class={CLS_NAV_BTN} type="button" on:click={() => goTo("load")}>
           불러오기
         </button>
@@ -269,4 +358,13 @@
   version={currentRelease.version}
   date={currentRelease.date}
   message={currentRelease.message}
+/>
+
+<MessagePreview
+  bind:visible={showQuickMessagePreview}
+  {battery}
+  {room}
+  {reportDate}
+  slots={previewSlots}
+  group={previewGroup}
 />
