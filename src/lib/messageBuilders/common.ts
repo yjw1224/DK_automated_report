@@ -74,11 +74,12 @@ export interface BuildCtx {
 
 // ─── 유틸 ──────────────────────────────────────────────────────────────────────
 
-/** YYYY-MM-DD → M/D */
+/** YYYY-MM-DD → M/D(요일) */
 export function shortDate(iso: string): string {
   if (!iso) return '';
   const d = new Date(iso + 'T00:00:00');
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+  return `${d.getMonth() + 1}/${d.getDate()}(${dayOfWeek})`;
 }
 
 /** YYYY-MM-DD → Date (시간 제거) */

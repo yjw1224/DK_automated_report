@@ -35,6 +35,8 @@ export interface AbsenceTrait {
   reason: AbsencePresetReason | null;
   /** 직접 입력 사유 (reason === null 일 때 유효) */
   customReason: string;
+  /** 1일성 열외 사유(근무/당직/외진) 선택 기준일 (YYYY-MM-DD) */
+  oneDayReasonDate?: string;
 }
 
 // ─── 면회 ────────────────────────────────────────────────────────────────────
@@ -42,6 +44,8 @@ export interface VisitTrait {
   hasVisit: boolean;
   /** 면회 날짜 (YYYY-MM-DD) */
   date: string;
+  /** 면회 시간 (HH:MM) */
+  time: string;
   /** 면회자 이름 */
   visitor: string;
 }
@@ -108,7 +112,8 @@ export function defaultTraits(): PersonnelTraits {
     absence: {
       isAbsent: false,
       reason: null,
-      customReason: ''
+      customReason: '',
+      oneDayReasonDate: ''
     },
     leaves: [],
     outpatient: {
@@ -119,6 +124,7 @@ export function defaultTraits(): PersonnelTraits {
     visit: {
       hasVisit: false,
       date: '',
+      time: '',
       visitor: ''
     }
   };

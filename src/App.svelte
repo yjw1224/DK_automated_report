@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import LoadPage from "./pages/LoadPage.svelte";
+  import SettingsPage from "./pages/SettingsPage.svelte";
   import UpdateLogModal from "./components/UpdateLogModal.svelte";
+  import MessagePreview from "./components/MessagePreview.svelte";
   import PersonnelPage from "./pages/PersonnelPage.svelte";
   import {
     getCurrentReleaseNote,
@@ -19,12 +21,18 @@
   } from "./lib/styles";
   import {
     BATTERY_OPTIONS,
+    MIL_TRAININGS,
+    RELIGIONS,
     ROOM_OPTIONS,
     isBattery,
     isRoom,
     type Battery,
     type Room,
+    type Slot,
   } from "./lib/types";
+  import type { GroupSettings } from "./lib/messageBuilders";
+  import { getGroupStorageKey, getPersonnelStorageKey } from "./lib/storageKeys";
+  import { ensureAppSettingsInitialized } from "./lib/settings";
   import { startVersionCheck } from "./lib/versionCheck";
 
   function getTodayIsoDate(): string {
@@ -42,6 +50,38 @@
   let showUpdateLog = false;
   let dontShowUpdateLog = false;
   let updateLogReady = false;
+  let showSettings = false;
+  let showQuickMessagePreview = false;
+
+  const SLOT_COUNT = 10;
+
+  let previewSlots: Slot[] = Array(SLOT_COUNT).fill(null);
+
+  function createDefaultPreviewGroup(): GroupSettings {
+    return {
+      civHaircut: { enabled: false, members: [] },
+      religion: RELIGIONS.reduce(
+        (acc, rel) => {
+          acc[rel] = [];
+          return acc;
+        },
+        {} as GroupSettings["religion"],
+      ),
+      milTrainingEnabled: false,
+      milTraining: MIL_TRAININGS.reduce(
+        (acc, cat) => {
+          acc[cat] = [];
+          return acc;
+        },
+        {} as GroupSettings["milTraining"],
+      ),
+      deliveryEnabled: false,
+      deliveryOrders: [],
+      groupNote: "",
+    };
+  }
+
+  let previewGroup: GroupSettings = createDefaultPreviewGroup();
 
   const currentRelease = getCurrentReleaseNote();
   const UPDATE_LOG_DISMISS_KEY = getUpdateLogDismissKey(currentRelease.version);
@@ -88,6 +128,7 @@
   }
 
   onMount(() => {
+    ensureAppSettingsInitialized();
     reportDate = getTodayIsoDate();
     loadFromStorage();
     syncFromHash();
@@ -148,6 +189,60 @@
     showUpdateLog = true;
   }
 
+  function openSettings() {
+    showSettings = true;
+  }
+
+  function closeSettings() {
+    showSettings = false;
+  }
+
+  function loadQuickPreviewData() {
+    const defaultSlots: Slot[] = Array(SLOT_COUNT).fill(null);
+    const defaultGroup = createDefaultPreviewGroup();
+
+    try {
+      const personnelRaw = localStorage.getItem(getPersonnelStorageKey(battery, room));
+      if (personnelRaw) {
+        const parsed = JSON.parse(personnelRaw) as Slot[];
+        if (Array.isArray(parsed) && parsed.length === SLOT_COUNT) {
+          previewSlots = parsed;
+        } else {
+          previewSlots = defaultSlots;
+        }
+      } else {
+        previewSlots = defaultSlots;
+      }
+    } catch {
+      previewSlots = defaultSlots;
+    }
+
+    try {
+      const groupRaw = localStorage.getItem(getGroupStorageKey(battery, room));
+      if (groupRaw) {
+        const parsed = JSON.parse(groupRaw) as Partial<GroupSettings>;
+        previewGroup = {
+          ...defaultGroup,
+          ...parsed,
+          civHaircut: parsed.civHaircut ?? defaultGroup.civHaircut,
+          religion: parsed.religion ?? defaultGroup.religion,
+          milTraining: parsed.milTraining ?? defaultGroup.milTraining,
+          deliveryOrders: parsed.deliveryOrders ?? defaultGroup.deliveryOrders,
+        };
+      } else {
+        previewGroup = defaultGroup;
+      }
+    } catch {
+      previewGroup = defaultGroup;
+    }
+  }
+
+  function openQuickMessagePreview() {
+    saveMainForm();
+    loadQuickPreviewData();
+    showQuickMessagePreview = true;
+  }
+
   $: if (updateLogReady) {
     if (dontShowUpdateLog) {
       localStorage.setItem(UPDATE_LOG_DISMISS_KEY, "1");
@@ -157,15 +252,23 @@
   }
 </script>
 
-<main class="min-h-screen bg-slate-50 p-6 text-slate-900">
+<main class="relative min-h-screen bg-slate-50 p-6 text-slate-900">
   {#if currentRoute === "home"}
     <section
       class="mx-auto flex w-full max-w-3xl flex-col gap-6 rounded-2xl bg-white p-8 shadow-sm">
-      <header class="flex flex-col gap-2">
-        <h1 class="text-2xl font-bold">대표병 카톡 생성기</h1>
-        <p class="text-sm text-slate-600">
-          전진! 생활관 정보와 날짜를 입력하고 시작 버튼을 누르세요.
-        </p>
+      <header class="flex items-start justify-between gap-3">
+        <div class="flex flex-col gap-2">
+          <h1 class="text-2xl font-bold">대표병 카톡 생성기</h1>
+          <p class="text-sm text-slate-600">
+            전진! 생활관 정보와 날짜를 입력하고 시작 버튼을 누르십시오.
+          </p>
+        </div>
+        <button
+          type="button"
+          on:click={openSettings}
+          class="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+          설정
+        </button>
       </header>
 
       <div class="grid gap-4 sm:grid-cols-3">
@@ -208,6 +311,12 @@
           on:click={() => goTo("personnel")}>
           시작하기
         </button>
+        <button
+          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 active:bg-blue-700"
+          type="button"
+          on:click={openQuickMessagePreview}>
+          메시지 생성하기
+        </button>
         <button class={CLS_NAV_BTN} type="button" on:click={() => goTo("load")}>
           불러오기
         </button>
@@ -237,6 +346,10 @@
         >돌아가기</button>
     </div>
   {/if}
+
+  {#if showSettings}
+    <SettingsPage onBack={closeSettings} />
+  {/if}
 </main>
 
 <UpdateLogModal
@@ -245,4 +358,13 @@
   version={currentRelease.version}
   date={currentRelease.date}
   message={currentRelease.message}
+/>
+
+<MessagePreview
+  bind:visible={showQuickMessagePreview}
+  {battery}
+  {room}
+  {reportDate}
+  slots={previewSlots}
+  group={previewGroup}
 />

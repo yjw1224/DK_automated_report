@@ -56,7 +56,7 @@ function stripDefaults(t: PersonnelTraits): Partial<PersonnelTraits> {
   }
 
   // visit: 기본이 아닐 때만
-  if (t.visit.hasVisit || t.visit.date || t.visit.visitor) {
+  if (t.visit.hasVisit || t.visit.date || t.visit.time || t.visit.visitor) {
     out.visit = t.visit;
   }
 

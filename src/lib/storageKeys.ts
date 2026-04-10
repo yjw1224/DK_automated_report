@@ -3,6 +3,7 @@ import type { Battery, Room } from './types';
 export const MAIN_FORM_STORAGE_KEY = 'dk-main-form';
 export const PERSONNEL_STORAGE_KEY_PREFIX = 'dk-personnel';
 export const GROUP_STORAGE_KEY_PREFIX = 'dk-group';
+export const APP_SETTINGS_STORAGE_KEY = 'dk-app-settings';
 
 export function getPersonnelStorageKey(battery: Battery, room: Room): string {
   return `${PERSONNEL_STORAGE_KEY_PREFIX}-${battery}-${room}`;
