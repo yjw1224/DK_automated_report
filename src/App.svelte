@@ -42,6 +42,7 @@
   let showUpdateLog = false;
   let dontShowUpdateLog = false;
   let updateLogReady = false;
+  let showSettings = false;
 
   const currentRelease = getCurrentReleaseNote();
   const UPDATE_LOG_DISMISS_KEY = getUpdateLogDismissKey(currentRelease.version);
@@ -148,6 +149,14 @@
     showUpdateLog = true;
   }
 
+  function openSettings() {
+    showSettings = true;
+  }
+
+  function closeSettings() {
+    showSettings = false;
+  }
+
   $: if (updateLogReady) {
     if (dontShowUpdateLog) {
       localStorage.setItem(UPDATE_LOG_DISMISS_KEY, "1");
@@ -157,15 +166,23 @@
   }
 </script>
 
-<main class="min-h-screen bg-slate-50 p-6 text-slate-900">
+<main class="relative min-h-screen bg-slate-50 p-6 text-slate-900">
   {#if currentRoute === "home"}
     <section
       class="mx-auto flex w-full max-w-3xl flex-col gap-6 rounded-2xl bg-white p-8 shadow-sm">
-      <header class="flex flex-col gap-2">
-        <h1 class="text-2xl font-bold">대표병 카톡 생성기</h1>
-        <p class="text-sm text-slate-600">
-          전진! 생활관 정보와 날짜를 입력하고 시작 버튼을 누르세요.
-        </p>
+      <header class="flex items-start justify-between gap-3">
+        <div class="flex flex-col gap-2">
+          <h1 class="text-2xl font-bold">대표병 카톡 생성기</h1>
+          <p class="text-sm text-slate-600">
+            전진! 생활관 정보와 날짜를 입력하고 시작 버튼을 누르세요.
+          </p>
+        </div>
+        <button
+          type="button"
+          on:click={openSettings}
+          class="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+          설정
+        </button>
       </header>
 
       <div class="grid gap-4 sm:grid-cols-3">
@@ -236,6 +253,52 @@
       <button class={CLS_BACK_BTN} type="button" on:click={goHome}
         >돌아가기</button>
     </div>
+  {/if}
+
+  {#if showSettings}
+    <section
+      class="absolute inset-0 z-50 flex flex-col bg-white p-5 sm:p-8"
+      aria-label="설정 창">
+      <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <header class="flex items-center gap-3 border-b border-slate-200 pb-4">
+          <button
+            type="button"
+            on:click={closeSettings}
+            aria-label="돌아가기"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="h-5 w-5"
+              aria-hidden="true">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <h2 class="text-xl font-bold text-slate-900">설정</h2>
+        </header>
+
+        <div class="flex flex-col gap-4">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="mb-2 text-sm font-semibold text-slate-700">일반 설정</div>
+            <div class="h-16 rounded-lg border border-dashed border-slate-300 bg-white" />
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="mb-2 text-sm font-semibold text-slate-700">알림 설정</div>
+            <div class="h-16 rounded-lg border border-dashed border-slate-300 bg-white" />
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="mb-2 text-sm font-semibold text-slate-700">데이터 설정</div>
+            <div class="h-16 rounded-lg border border-dashed border-slate-300 bg-white" />
+          </div>
+        </div>
+      </div>
+    </section>
   {/if}
 </main>
 

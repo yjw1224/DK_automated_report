@@ -9,6 +9,7 @@
     defaultLeaveEntry,
     defaultTraits,
     type AbsencePresetReason,
+    type AbsenceTrait,
     type Battery,
     type DeliveryOrder,
     type LeaveEntry,
@@ -44,6 +45,16 @@
   export let reportDate: string;
 
   const SLOT_COUNT = 10;
+  const LEAVE_AUTO_ABSENCE_REASONS: ReadonlySet<AbsencePresetReason> = new Set([
+    "휴가",
+    "외출",
+    "외박",
+  ]);
+  const ONE_DAY_AUTO_CLEAR_REASONS: ReadonlySet<AbsencePresetReason> = new Set([
+    "근무",
+    "당직",
+    "외진",
+  ]);
 
   /**
    * 인원 슬롯 배열: 2열 × 5행 = 최대 10명
@@ -225,6 +236,14 @@
     return null;
   }
 
+  function shouldClearOneDayAutoAbsence(absence: AbsenceTrait, baseDate: string): boolean {
+    if (!absence.isAbsent || !absence.reason) return false;
+    if (!ONE_DAY_AUTO_CLEAR_REASONS.has(absence.reason)) return false;
+    // 레거시 데이터(oneDayReasonDate 없음)도 다음 날 조회 시 풀리도록 기본 clear 처리
+    if (!absence.oneDayReasonDate) return true;
+    return absence.oneDayReasonDate < baseDate;
+  }
+
   function applyAutoAbsenceToAllSlots() {
     let changed = false;
     const nextSlots: Slot[] = slots.map((slot) => {
@@ -245,15 +264,22 @@
         next.traits.absence.isAbsent = true;
         next.traits.absence.reason = autoAbsence;
         next.traits.absence.customReason = "";
+        next.traits.absence.oneDayReasonDate = "";
         changed = true;
         return next;
       }
 
-      if (
-        !prevAbsence.isAbsent &&
-        prevAbsence.reason === null &&
-        prevAbsence.customReason === ""
-      ) {
+      const shouldClearLeaveAutoAbsence =
+        prevAbsence.isAbsent &&
+        !!prevAbsence.reason &&
+        prevAbsence.customReason === "" &&
+        LEAVE_AUTO_ABSENCE_REASONS.has(prevAbsence.reason);
+      const shouldClearOneDayAbsence = shouldClearOneDayAutoAbsence(
+        prevAbsence,
+        reportDate,
+      );
+
+      if (!shouldClearLeaveAutoAbsence && !shouldClearOneDayAbsence) {
         return slot;
       }
 
@@ -261,6 +287,7 @@
       next.traits.absence.isAbsent = false;
       next.traits.absence.reason = null;
       next.traits.absence.customReason = "";
+      next.traits.absence.oneDayReasonDate = "";
       changed = true;
       return next;
     });
@@ -426,6 +453,7 @@
       draft.traits.absence.isAbsent = true;
       draft.traits.absence.reason = autoAbsence;
       draft.traits.absence.customReason = "";
+      draft.traits.absence.oneDayReasonDate = "";
       useCustomReason = false;
       // 강제 업데이트를 위해 draft 재할당
       draft = draft;
@@ -438,11 +466,15 @@
     if (!a.isAbsent) {
       a.reason = null;
       a.customReason = "";
+      a.oneDayReasonDate = "";
     } else if (useCustomReason) {
       a.reason = null;
+      a.oneDayReasonDate = "";
     } else {
       a.customReason = "";
       if (!a.reason) a.reason = ABSENCE_PRESET_REASONS[0];
+      a.oneDayReasonDate =
+        a.reason && ONE_DAY_AUTO_CLEAR_REASONS.has(a.reason) ? reportDate : "";
     }
   }
 
@@ -489,10 +521,16 @@
     if (value === "__custom__") {
       useCustomReason = true;
       draft.traits.absence.reason = null;
+      draft.traits.absence.oneDayReasonDate = "";
     } else {
       useCustomReason = false;
       draft.traits.absence.customReason = "";
       draft.traits.absence.reason = (value as AbsencePresetReason) || null;
+      draft.traits.absence.oneDayReasonDate = ONE_DAY_AUTO_CLEAR_REASONS.has(
+        draft.traits.absence.reason as AbsencePresetReason,
+      )
+        ? reportDate
+        : "";
     }
   }
 
@@ -691,6 +729,7 @@
                 draft.traits.absence.isAbsent = false;
                 draft.traits.absence.reason = null;
                 draft.traits.absence.customReason = "";
+                draft.traits.absence.oneDayReasonDate = "";
                 useCustomReason = false;
               }
             }}
