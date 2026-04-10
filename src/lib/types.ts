@@ -44,6 +44,8 @@ export interface VisitTrait {
   hasVisit: boolean;
   /** 면회 날짜 (YYYY-MM-DD) */
   date: string;
+  /** 면회 시간 (HH:MM) */
+  time: string;
   /** 면회자 이름 */
   visitor: string;
 }
@@ -122,6 +124,7 @@ export function defaultTraits(): PersonnelTraits {
     visit: {
       hasVisit: false,
       date: '',
+      time: '',
       visitor: ''
     }
   };

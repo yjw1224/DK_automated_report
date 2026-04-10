@@ -142,7 +142,8 @@ function buildVisit(ctx: BuildCtx): string[] {
 
   return ['', `${SECTION_ICONS['면회']} 면회`, '', ...list.map((s) => {
     const d = shortDate(s.traits.visit.date);
-    return `${d} ${s.rank} ${s.name} 면회 (${s.traits.visit.visitor}) 희망합니다.`;
+    const hour_minute = s.traits.visit.time ? ` ${s.traits.visit.time}` : '';
+    return `${d}${hour_minute} ${s.rank} ${s.name} 면회 (${s.traits.visit.visitor}) 희망합니다.`;
   })];
 }
 

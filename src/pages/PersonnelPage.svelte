@@ -307,6 +307,7 @@
         next = next ?? structuredClone(slot);
         next.traits.visit.hasVisit = false;
         next.traits.visit.date = "";
+        next.traits.visit.time = "";
         next.traits.visit.visitor = "";
         changed = true;
       }
@@ -552,7 +553,7 @@
       return false;
     if (
       d.traits.visit.hasVisit &&
-      (!d.traits.visit.date || !d.traits.visit.visitor.trim())
+      (!d.traits.visit.date || !d.traits.visit.time || !d.traits.visit.visitor.trim())
     )
       return false;
     return true;
@@ -1182,6 +1183,7 @@
               if (draft) {
                 draft.traits.visit.hasVisit = false;
                 draft.traits.visit.date = "";
+                draft.traits.visit.time = "";
                 draft.traits.visit.visitor = "";
               }
             }}
@@ -1207,6 +1209,53 @@
                   : CLS_FIELD_OK}" />
             </div>
             <div class="flex items-center gap-2">
+              <span class="w-12 shrink-0 text-xs text-slate-500">시간</span>
+              <div class="flex items-center gap-1">
+                <select
+                  value={draft.traits.visit.time
+                    ? draft.traits.visit.time.split(":")[0]
+                    : ""}
+                  on:change={(e) => {
+                    if (!draft) return;
+                    const h = e.currentTarget.value;
+                    const m = draft.traits.visit.time
+                      ? draft.traits.visit.time.split(":")[1]
+                      : "00";
+                    draft.traits.visit.time = h ? `${h}:${m || "00"}` : "";
+                    draft = draft;
+                  }}
+                  class="w-20 rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2
+                    {saveAttempted && !draft.traits.visit.time
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}">
+                  {#each Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")) as h}
+                    <option value={h}>{h}시</option>
+                  {/each}
+                </select>
+                <select
+                  value={draft.traits.visit.time
+                    ? draft.traits.visit.time.split(":")[1]
+                    : ""}
+                  on:change={(e) => {
+                    if (!draft) return;
+                    const h = draft.traits.visit.time
+                      ? draft.traits.visit.time.split(":")[0]
+                      : "";
+                    const m = e.currentTarget.value;
+                    draft.traits.visit.time = h ? `${h}:${m || "00"}` : "";
+                    draft = draft;
+                  }}
+                  class="w-20 rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2
+                    {saveAttempted && !draft.traits.visit.time
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}">
+                  {#each ["00", "10", "20", "30", "40", "50"] as m}
+                    <option value={m}>{m}분</option>
+                  {/each}
+                </select>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
               <span class="w-12 shrink-0 text-xs text-slate-500">면회자</span>
               <input
                 type="text"
@@ -1217,9 +1266,9 @@
                   ? CLS_FIELD_ERR
                   : CLS_FIELD_OK}" />
             </div>
-            {#if saveAttempted && (!draft.traits.visit.date || !draft.traits.visit.visitor.trim())}
+            {#if saveAttempted && (!draft.traits.visit.date || !draft.traits.visit.time || !draft.traits.visit.visitor.trim())}
               <p class="text-xs text-red-500">
-                날짜와 면회자를 모두 입력해 주세요.
+                날짜, 시간, 면회자를 모두 입력해 주세요.
               </p>
             {/if}
           </div>
