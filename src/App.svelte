@@ -26,6 +26,7 @@
     type Battery,
     type Room,
   } from "./lib/types";
+  import { ensureAppSettingsInitialized } from "./lib/settings";
   import { startVersionCheck } from "./lib/versionCheck";
 
   function getTodayIsoDate(): string {
@@ -90,6 +91,7 @@
   }
 
   onMount(() => {
+    ensureAppSettingsInitialized();
     reportDate = getTodayIsoDate();
     loadFromStorage();
     syncFromHash();
@@ -175,7 +177,7 @@
         <div class="flex flex-col gap-2">
           <h1 class="text-2xl font-bold">대표병 카톡 생성기</h1>
           <p class="text-sm text-slate-600">
-            전진! 생활관 정보와 날짜를 입력하고 시작 버튼을 누르세요.
+            전진! 생활관 정보와 날짜를 입력하고 시작 버튼을 누르십시오.
           </p>
         </div>
         <button

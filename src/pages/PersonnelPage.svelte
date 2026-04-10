@@ -36,6 +36,7 @@
   } from "../lib/styles";
   import { getGroupStorageKey, getPersonnelStorageKey } from "../lib/storageKeys";
   import { encodeTransferData } from "../lib/transfer";
+  import { getAppSettings } from "../lib/settings";
   import MessagePreview from "../components/MessagePreview.svelte";
 
   import { swipeSelect } from "../lib/swipeSelect";
@@ -79,6 +80,10 @@
 
   // 메시지 미리보기 모달
   let showMessagePreview = false;
+
+  // 진급 알림 모달
+  let showPromotionModal = false;
+  let promotionSelectedIndexes = new Set<number>();
 
   // 인수인계 내보내기
   let exportCopied = false;
@@ -245,31 +250,35 @@
   }
 
   function applyAutoAbsenceToAllSlots() {
+    const autoDeletePastLeavesEnabled = getAppSettings().autoDeletePastLeaves;
     let changed = false;
     const nextSlots: Slot[] = slots.map((slot) => {
       if (!slot) return null;
 
-      const autoAbsence = resolveAutoAbsenceReason(slot.traits.leaves, reportDate);
+      let next: Soldier | null = null;
+      const autoAbsence = autoDeletePastLeavesEnabled
+        ? resolveAutoAbsenceReason(slot.traits.leaves, reportDate)
+        : null;
       const prevAbsence = slot.traits.absence;
 
       if (autoAbsence) {
-        if (
+        const isSameAutoAbsence =
           prevAbsence.isAbsent &&
           prevAbsence.reason === autoAbsence &&
-          prevAbsence.customReason === ""
-        ) {
-          return slot;
+          prevAbsence.customReason === "";
+
+        if (!isSameAutoAbsence) {
+          next = structuredClone(slot);
+          next.traits.absence.isAbsent = true;
+          next.traits.absence.reason = autoAbsence;
+          next.traits.absence.customReason = "";
+          next.traits.absence.oneDayReasonDate = "";
+          changed = true;
         }
-        const next = structuredClone(slot);
-        next.traits.absence.isAbsent = true;
-        next.traits.absence.reason = autoAbsence;
-        next.traits.absence.customReason = "";
-        next.traits.absence.oneDayReasonDate = "";
-        changed = true;
-        return next;
       }
 
       const shouldClearLeaveAutoAbsence =
+        autoDeletePastLeavesEnabled &&
         prevAbsence.isAbsent &&
         !!prevAbsence.reason &&
         prevAbsence.customReason === "" &&
@@ -279,17 +288,30 @@
         reportDate,
       );
 
-      if (!shouldClearLeaveAutoAbsence && !shouldClearOneDayAbsence) {
-        return slot;
+      if (!autoAbsence && (shouldClearLeaveAutoAbsence || shouldClearOneDayAbsence)) {
+        next = next ?? structuredClone(slot);
+        next.traits.absence.isAbsent = false;
+        next.traits.absence.reason = null;
+        next.traits.absence.customReason = "";
+        next.traits.absence.oneDayReasonDate = "";
+        changed = true;
       }
 
-      const next = structuredClone(slot);
-      next.traits.absence.isAbsent = false;
-      next.traits.absence.reason = null;
-      next.traits.absence.customReason = "";
-      next.traits.absence.oneDayReasonDate = "";
-      changed = true;
-      return next;
+      const shouldClearPastVisit =
+        autoDeletePastLeavesEnabled &&
+        slot.traits.visit.hasVisit &&
+        !!slot.traits.visit.date &&
+        slot.traits.visit.date < reportDate;
+
+      if (shouldClearPastVisit) {
+        next = next ?? structuredClone(slot);
+        next.traits.visit.hasVisit = false;
+        next.traits.visit.date = "";
+        next.traits.visit.visitor = "";
+        changed = true;
+      }
+
+      return next ?? slot;
     });
 
     if (changed) {
@@ -305,6 +327,99 @@
         }
       }
     }
+  }
+
+  function isFirstDayOfMonth(dateStr: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && dateStr.slice(8, 10) === "01";
+  }
+
+  function isPromotableSlot(slot: Slot): slot is Soldier {
+    return !!slot && slot.rank !== "병장";
+  }
+
+  function promoteRank(rank: Rank): Rank {
+    if (rank === "이병") return "일병";
+    if (rank === "일병") return "상병";
+    if (rank === "상병") return "병장";
+    return "병장";
+  }
+
+  function openPromotionModalIfNeeded() {
+    const settings = getAppSettings();
+    if (!settings.promotionAlertEnabled) return;
+
+    // TEST MODE: 날짜 조건 임시 해제 (매번 뜨도록)
+    if (!isFirstDayOfMonth(reportDate)) return;
+
+    // TODO(정식 적용 시 주석 해제): 해당 월에 한 번만 표시
+    const monthKey = reportDate.slice(0, 7);
+    const monthlyDismissKey = `dk-promotion-dismissed-${battery}-${room}-${monthKey}`;
+    if (localStorage.getItem(monthlyDismissKey) === "1") return;
+
+    if (!slots.some((slot) => isPromotableSlot(slot))) return;
+
+    promotionSelectedIndexes = new Set<number>();
+    showPromotionModal = true;
+  }
+
+  function togglePromotionSelection(index: number) {
+    const slot = slots[index];
+    if (!isPromotableSlot(slot)) return;
+
+    const next = new Set(promotionSelectedIndexes);
+    if (next.has(index)) {
+      next.delete(index);
+    } else {
+      next.add(index);
+    }
+    promotionSelectedIndexes = next;
+  }
+
+  function closePromotionModal() {
+    // 이번 달 진급 알림 다시 안 뜨도록 설정
+    const monthKey = reportDate.slice(0, 7);
+    const monthlyDismissKey = `dk-promotion-dismissed-${battery}-${room}-${monthKey}`;
+    localStorage.setItem(monthlyDismissKey, "1");
+
+    showPromotionModal = false;
+    promotionSelectedIndexes = new Set<number>();
+  }
+
+  function confirmPromotionSelection() {
+    if (promotionSelectedIndexes.size === 0) {
+      closePromotionModal();
+      return;
+    }
+
+    let changed = false;
+    const nextSlots: Slot[] = slots.map((slot, index) => {
+      if (!slot || !promotionSelectedIndexes.has(index) || slot.rank === "병장") {
+        return slot;
+      }
+      const next = structuredClone(slot);
+      next.rank = promoteRank(slot.rank);
+      changed = true;
+      return next;
+    });
+
+    if (changed) {
+      slots = nextSlots;
+      persist();
+
+      if (selectedIndex !== null) {
+        const selected = slots[selectedIndex];
+        if (selected) {
+          draft = structuredClone(selected);
+          useCustomReason =
+            draft.traits.absence.reason === null && draft.traits.absence.isAbsent;
+        } else {
+          selectedIndex = null;
+          draft = null;
+        }
+      }
+    }
+
+    closePromotionModal();
   }
 
   /** 배열 내 멤버 토글 (있으면 제거, 없으면 추가) */
@@ -447,6 +562,8 @@
   function applyAutoAbsenceToDraft() {
     if (!draft || absenceTouched) return;
 
+    if (!getAppSettings().autoDeletePastLeaves) return;
+
     const autoAbsence = resolveAutoAbsenceReason(draft.traits.leaves, reportDate);
 
     if (autoAbsence && draft.traits.absence.reason !== autoAbsence) {
@@ -581,6 +698,7 @@
   onMount(() => {
     load();
     applyAutoAbsenceToAllSlots();
+    openPromotionModalIfNeeded();
   });
 </script>
 
@@ -1544,6 +1662,64 @@
     {exportCopied ? "✅ 클립보드에 복사됨!" : "📤 인수인계 코드 공유"}
   </button>
 </section>
+
+{#if showPromotionModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4">
+    <div class="w-full max-w-3xl rounded-2xl bg-white p-5 shadow-xl sm:p-6">
+      <header class="mb-4">
+        <h3 class="text-lg font-bold text-slate-900">{new Date().getMonth() + 1}월 진급자 선택</h3>
+        <p class="mt-1 text-sm text-slate-600">
+          진급할 인원을 선택해 주세요.
+        </p>
+      </header>
+
+      <div class="grid grid-cols-2 gap-3">
+        {#each slots as slot, i}
+          {@const isSelectable = !!slot && slot.rank !== "병장"}
+          {@const isSelected = promotionSelectedIndexes.has(i)}
+          <button
+            type="button"
+            disabled={!isSelectable}
+            on:click={() => togglePromotionSelection(i)}
+            class="flex h-16 flex-col items-center justify-center rounded-xl border text-sm font-medium transition-colors
+              {isSelectable
+                ? isSelected
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300'
+                  : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                : slot
+                  ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                  : 'cursor-not-allowed border-dashed border-slate-300 bg-slate-50 text-slate-300'}">
+            {#if slot}
+              <span>{slot.rank} {slot.name}</span>
+              {#if slot.rank === "병장"}
+                <span class="mt-0.5 text-xs opacity-80">선택 불가</span>
+              {:else if isSelected}
+                <span class="mt-0.5 text-xs opacity-80">선택됨</span>
+              {/if}
+            {:else}
+              <span class="text-xl leading-none">-</span>
+            {/if}
+          </button>
+        {/each}
+      </div>
+
+      <div class="mt-5 flex gap-2">
+        <button
+          type="button"
+          on:click={confirmPromotionSelection}
+          class="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 active:bg-blue-700">
+          확인
+        </button>
+        <button
+          type="button"
+          on:click={closePromotionModal}
+          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+          취소
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <MessagePreview
   bind:visible={showMessagePreview}
