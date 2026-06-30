@@ -127,7 +127,10 @@ function buildOutpatient(ctx: BuildCtx): string[] {
   for (const s of list) {
     const d = shortDate(s.traits.outpatient.date);
     const place = s.traits.outpatient.place ? ` ${s.traits.outpatient.place}` : '';
-    lines.push(`${d} ${s.rank} ${s.name}${place} 외진 예정입니다.`);
+    const part = s.traits.outpatient.part;
+    const vehicle = s.traits.outpatient.vehicle;
+    const time = s.traits.outpatient.time.split(':');
+    lines.push(`${d} / ${s.rank} ${s.name} / ${place} / ${part} / ${vehicle} / ${time[0]}${time[1]}`);
   }
   return lines;
 }

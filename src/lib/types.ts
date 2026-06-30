@@ -58,6 +58,12 @@ export interface OutpatientTrait {
   date: string;
   /** 외진 장소 */
   place: string;
+  /** 진료 과목 (부위) */
+  part: string;
+  /** 이동 수단 */
+  vehicle: string;
+  /** 출발시각 (HH:MM) */
+  time: string;
 }
 
 // ─── 출타 일정 ────────────────────────────────────────────────────────────────
@@ -119,7 +125,10 @@ export function defaultTraits(): PersonnelTraits {
     outpatient: {
       hasOutpatient: false,
       date: '',
-      place: ''
+      place: '',
+      part: '',
+      vehicle: '',
+      time: ''
     },
     visit: {
       hasVisit: false,
