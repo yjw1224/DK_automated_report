@@ -1,5 +1,5 @@
 import './app.css';
-import App from './App.svelte';
+import App from './App.svelte'
 import { inject } from '@vercel/analytics';
 
 inject();

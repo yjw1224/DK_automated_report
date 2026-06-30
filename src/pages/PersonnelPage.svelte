@@ -1118,6 +1118,9 @@
                 draft.traits.outpatient.hasOutpatient = false;
                 draft.traits.outpatient.date = "";
                 draft.traits.outpatient.place = "";
+                draft.traits.outpatient.part = "";
+                draft.traits.outpatient.vehicle = "";
+                draft.traits.outpatient.time = "";
               }
             }}
             class="{CLS_TOGGLE} {!draft.traits.outpatient.hasOutpatient
@@ -1141,20 +1144,64 @@
                   ? CLS_FIELD_ERR
                   : CLS_FIELD_OK}" />
             </div>
+
+            <!-- 출발 시각 -->
             <div class="flex items-center gap-2">
-              <span class="w-10 shrink-0 text-xs text-slate-500">장소</span>
+              <span class="w-10 shrink-0 text-xs text-slate-500">출발</span>
+              <input
+                type="time"
+                bind:value={draft.traits.outpatient.time}
+                class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.outpatient.time
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" />
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="w-10 shrink-0 text-xs text-slate-500">병원</span>
               <input
                 type="text"
-                placeholder="외진 장소 입력"
+                placeholder="예) 고양병원"
                 bind:value={draft.traits.outpatient.place}
                 class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
                   {saveAttempted && !draft.traits.outpatient.place.trim()
                   ? CLS_FIELD_ERR
                   : CLS_FIELD_OK}" />
             </div>
-            {#if saveAttempted && (!draft.traits.outpatient.date || !draft.traits.outpatient.place.trim())}
+            <div class="flex items-center gap-2">
+              <span class="w-10 shrink-0 text-xs text-slate-500">과목</span>
+              <input
+                type="text"
+                placeholder="예) 정형외과(발목)"
+                bind:value={draft.traits.outpatient.part}
+                class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.outpatient.part.trim()
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" />
+            </div>
+
+            <!-- 이동 수단 -->
+            <div class="flex items-center gap-2">
+              <span class="w-10 shrink-0 text-xs text-slate-500">이동</span>
+              <input
+                type="text"
+                placeholder="예) 사단 버스"
+                bind:value={draft.traits.outpatient.vehicle}
+                class="min-w-0 flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                  {saveAttempted && !draft.traits.outpatient.vehicle.trim()
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" />
+            </div>
+
+            {#if saveAttempted && (
+              !draft.traits.outpatient.date ||
+              !draft.traits.outpatient.place.trim() ||
+              !draft.traits.outpatient.part.trim() ||
+              !draft.traits.outpatient.vehicle.trim() ||
+              !draft.traits.outpatient.time
+            )}
               <p class="text-xs text-red-500">
-                날짜와 장소를 모두 입력해 주세요.
+                날짜, 장소, 진료 과목, 이동 수단, 출발 시각을 모두 입력해 주세요.
               </p>
             {/if}
           </div>
