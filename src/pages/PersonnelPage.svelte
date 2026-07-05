@@ -6,6 +6,7 @@
     MIL_TRAININGS,
     RANKS,
     RELIGIONS,
+    VISIT_TYPES,
     defaultLeaveEntry,
     defaultTraits,
     type AbsencePresetReason,
@@ -20,7 +21,7 @@
     type Room,
     type Slot,
     type Soldier,
-    sortByRank,
+    sortByRank
   } from "../lib/types";
   import {
     CLS_CHIP,
@@ -961,6 +962,21 @@
             <!-- 휴가: 시작일 + 종료일 -->
             {#if entry.type === "휴가"}
               <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">종류</span>
+                <input
+                  type="text"
+                  placeholder="연가, 청원 등"
+                  bind:value={entry.leaveType}
+                  on:change={() => {
+                    draft = draft;
+                    applyAutoAbsenceToDraft();
+                  }}
+                  class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                    {saveAttempted && !entry.leaveType
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" />
+              </div>
+              <div class="flex items-center gap-2">
                 <span class="w-10 shrink-0 text-xs text-slate-500">시작</span>
                 <input
                   type="date"
@@ -1091,6 +1107,19 @@
                 </p>
               {/if}
             {/if}
+
+            <!-- 행선지 -->
+              <div class="flex items-center gap-2">
+                <span class="w-10 shrink-0 text-xs text-slate-500">행선지</span>
+                  <input
+                  type="text"
+                  bind:value={entry.destination}
+                  placeholder="예) 안산"
+                  class="flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2
+                    {saveAttempted && !entry.destination
+                    ? CLS_FIELD_ERR
+                    : CLS_FIELD_OK}" /> 
+              </div>
           </div>
         {/each}
       </div>
@@ -1301,6 +1330,21 @@
                   {/each}
                 </select>
               </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-12 shrink-0 text-xs text-slate-500">면회 종류</span>
+              
+                <select
+                  bind:value={draft.traits.visit.visitType}
+                  class="w-20 rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2
+                      {saveAttempted && !draft.traits.visit.visitType
+                      ? CLS_FIELD_ERR
+                      : CLS_FIELD_OK}">
+                      {#each VISIT_TYPES as visitType}
+                      <option value={visitType}>{visitType}</option>
+                      {/each}
+                </select>
+              
             </div>
             <div class="flex items-center gap-2">
               <span class="w-12 shrink-0 text-xs text-slate-500">면회자</span>

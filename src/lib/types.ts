@@ -14,6 +14,9 @@ export type Room = (typeof ROOM_OPTIONS)[number];
 export function isRoom(value: string): value is Room {
   return (ROOM_OPTIONS as readonly string[]).includes(value);
 }
+export const VISIT_TYPES = ['영내', '영외'] as const;
+
+export type VisitType = typeof VISIT_TYPES[number];
 
 // ─── 열외 사유 ────────────────────────────────────────────────────────────────
 export const ABSENCE_PRESET_REASONS = [
@@ -46,6 +49,8 @@ export interface VisitTrait {
   date: string;
   /** 면회 시간 (HH:MM) */
   time: string;
+  /** 면회 타입 (영내 / 영외) */
+  visitType: VisitType;
   /** 면회자 이름 */
   visitor: string;
 }
@@ -77,10 +82,14 @@ export interface LeaveEntry {
   startDate: string;
   /** 종료일 (YYYY-MM-DD) — 휴가만 사용 */
   endDate: string;
+  /** 출타 종류 (연가, 청원, 기타) - 휴가만 사용 */
+  leaveType: string;
+  /** 출타 행선지 */
+  destination: string;
 }
 
 export function defaultLeaveEntry(): LeaveEntry {
-  return { type: '휴가', startDate: '', endDate: '' };
+  return { type: '휴가', startDate: '', leaveType: '연가', endDate: '', destination: '' };
 }
 
 // ─── 단체 설정 ────────────────────────────────────────────────────────────────
@@ -134,6 +143,7 @@ export function defaultTraits(): PersonnelTraits {
       hasVisit: false,
       date: '',
       time: '',
+      visitType: '영외' as VisitType,
       visitor: ''
     }
   };
