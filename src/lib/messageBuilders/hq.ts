@@ -39,7 +39,7 @@ function buildHeader(ctx: BuildCtx): string[] {
     }
     const breakdown = [...map.entries()].map(([l, c]) => `${l} ${c}`).join(' ');
     lines.push(`총원 ${total} 열외 ${absentCount}`);
-    lines.push(`열외내용 ${breakdown}${particle(present)}`);
+    lines.push(`열외내용 ${breakdown}`);
     lines.push(`현재원 ${present}`);
   } else {
     lines.push(`총원 ${total}`);
