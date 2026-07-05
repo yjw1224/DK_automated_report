@@ -2,7 +2,7 @@
  * 본부포대 메시지 빌더
  */
 import type { Soldier } from '../types';
-import { MIL_TRAININGS, RELIGIONS, rankIndex } from '../types';
+import { MIL_TRAININGS, RELIGIONS, rankIndex, LeaveEntry } from '../types';
 import type { BuildCtx } from './common';
 import {
   MIL_CONFIG,
@@ -28,7 +28,7 @@ function buildHeader(ctx: BuildCtx): string[] {
   const absentCount = absent.length;
   const present = total - absentCount;
 
-  const lines = [`${batteryLabel} ${room}생활관 `];
+  const lines = [`[${batteryLabel} ${room}생활관]`];
 
   if (absentCount > 0) {
     const map = new Map<string, number>();
@@ -39,9 +39,11 @@ function buildHeader(ctx: BuildCtx): string[] {
     }
     const breakdown = [...map.entries()].map(([l, c]) => `${l} ${c}`).join(' ');
     lines.push(`총원 ${total} 열외 ${absentCount}`);
-    lines.push(`열외내용 ${breakdown}${particle(present)} 제외한 현재원 ${present}입니다.`);
+    lines.push(`열외내용 ${breakdown}${particle(present)}`);
+    lines.push(`현재원 ${present}`);
   } else {
-    lines.push(`총원 ${total} 현재원 ${present}입니다.`);
+    lines.push(`총원 ${total}`);
+    lines.push(`현재원 ${present}`);
   }
 
   return lines;
@@ -59,50 +61,97 @@ function leaveEndDate(e: { type: string; startDate: string; endDate: string }): 
 }
 
 function buildLeave(ctx: BuildCtx): string[] {
-  const items: { soldier: Soldier; entry: { type: string; startDate: string; endDate: string } }[] = [];
-  for (const s of ctx.soldiers) {
-    for (const e of s.traits.leaves) {
-      if (!e.startDate) continue;
-      if (leaveEndDate(e) < ctx.today) continue;
-      items.push({ soldier: s, entry: e });
+  const vacations: { soldier: Soldier; leave: LeaveEntry }[] = [];
+  const outings: { soldier: Soldier; leave: LeaveEntry }[] = [];
+  const overnights: { soldier: Soldier; leave: LeaveEntry }[] = [];
+
+  // 출타 수집
+  for (const soldier of ctx.soldiers) {
+    for (const leave of soldier.traits.leaves) {
+      if (!leave.startDate) continue;
+      if (leaveEndDate(leave) < ctx.today) continue;
+
+      switch (leave.type) {
+        case '휴가':
+          vacations.push({ soldier, leave });
+          break;
+
+        case '평일외출':
+        case '주말외출':
+          outings.push({ soldier, leave });
+          break;
+
+        case '평일외박':
+        case '주말외박':
+        case '면회외박':
+          overnights.push({ soldier, leave });
+          break;
+      }
     }
   }
-  items.sort((a, b) => {
-    if (a.entry.startDate !== b.entry.startDate) return a.entry.startDate < b.entry.startDate ? -1 : 1;
+
+  // 시작일 → 계급 순 정렬
+  const sorter = (
+    a: { soldier: Soldier; leave: LeaveEntry },
+    b: { soldier: Soldier; leave: LeaveEntry }
+  ) => {
+    if (a.leave.startDate !== b.leave.startDate) {
+      return a.leave.startDate < b.leave.startDate ? -1 : 1;
+    }
     return rankIndex(a.soldier.rank) - rankIndex(b.soldier.rank);
-  });
+  };
 
-  const lines = ['', `${SECTION_ICONS['출타']} 출타 `, ''];
-  if (items.length === 0) return [...lines, '-'];
+  vacations.sort(sorter);
+  outings.sort(sorter);
+  overnights.sort(sorter);
 
-  for (const { soldier: s, entry: l } of items) {
-    if (l.type === '휴가') {
-      if (!l.endDate) continue;
-      const start = shortDate(l.startDate);
-      const end = shortDate(l.endDate);
-      const startD = toDate(l.startDate);
-      const endD = toDate(l.endDate);
-      const suffix = startD <= ctx.today && ctx.today <= endD ? '중입니다.' : '예정입니다.';
-      lines.push(`${start}~${end} ${s.rank} ${s.name} 휴가 ${suffix}`);
-    } else if (l.type === '주말외박' || l.type === '면회외박') {
-      const startD = toDate(l.startDate);
-      const endD = new Date(startD);
-      endD.setDate(endD.getDate() + 1);
-      const start = shortDate(l.startDate);
-      const end = `${endD.getMonth() + 1}/${endD.getDate()}`;
-      const suffix = startD <= ctx.today && ctx.today <= endD ? '중입니다.' : '예정입니다.';
-      lines.push(`${start}~${end} ${s.rank} ${s.name} ${l.type} ${suffix}`);
-    } else {
-      const d = shortDate(l.startDate);
-      const dateD = toDate(l.startDate);
-      const suffix = dateD <= ctx.today ? '중입니다.' : '예정입니다.';
-      lines.push(`${d} ${s.rank} ${s.name} ${l.type} ${suffix}`);
+  const lines: string[] = [
+    '',
+    `${SECTION_ICONS['출타']} 출타`,
+    '',
+    '○ 휴가'
+  ];
+
+  if (vacations.length === 0) {
+    lines.push('없음');
+  } else {
+    for (const { soldier, leave } of vacations) {
+      lines.push(
+        `${shortDate(leave.startDate)} / ${soldier.rank} ${soldier.name} / ${shortDate(leave.endDate)}(${leave.leaveType}) / ${leave.destination}`
+      );
     }
   }
+
+  lines.push('', '○ 외출');
+
+  if (outings.length === 0) {
+    lines.push('없음');
+  } else {
+    for (const { soldier, leave } of outings) {
+      lines.push(
+        `${shortDate(leave.startDate)} / ${soldier.rank} ${soldier.name} / ${leave.destination}`
+      );
+    }
+  }
+
+  lines.push('', '○ 외박');
+
+  if (overnights.length === 0) {
+    lines.push('없음');
+  } else {
+    for (const { soldier, leave } of overnights) {
+      lines.push(
+        `${shortDate(leave.startDate)} / ${soldier.rank} ${soldier.name} / ${leave.destination}`
+      );
+    }
+  }
+
   return lines;
 }
 
 function buildReligion(ctx: BuildCtx): string[] {
+  if(ctx.today.getDay() !== 4) return [];
+
   const lines: string[] = [];
   const active = RELIGIONS.filter((r) => resolve(ctx.group.religion[r], ctx).length > 0);
   if (active.length === 0) return lines;
@@ -110,7 +159,7 @@ function buildReligion(ctx: BuildCtx): string[] {
   lines.push('', `${SECTION_ICONS['종교']} 종교`);
   for (const rel of active) {
     const members = resolve(ctx.group.religion[rel], ctx);
-    lines.push('', `${RELIGION_ICON[rel]} ${rel}`, `${formatMembers(members)} 희망합니다.`);
+    lines.push('', `${RELIGION_ICON[rel]} ${rel}`, `${formatMembers(members)}`);
   }
   return lines;
 }
@@ -121,8 +170,8 @@ function buildOutpatient(ctx: BuildCtx): string[] {
     .filter((s) => toDate(s.traits.outpatient.date) >= ctx.today)
     .sort(byDateThenRank((s) => s.traits.outpatient.date));
 
-  const lines = ['', `${SECTION_ICONS['외진']} 외진`, ''];
-  if (list.length === 0) return [...lines, '-'];
+  const lines = ['', `${SECTION_ICONS['외진']} 외진`];
+  if (list.length === 0) return [...lines, '없음'];
 
   for (const s of list) {
     const d = shortDate(s.traits.outpatient.date);
@@ -141,21 +190,25 @@ function buildVisit(ctx: BuildCtx): string[] {
     .filter((s) => toDate(s.traits.visit.date) >= ctx.today)
     .sort(byDateThenRank((s) => s.traits.visit.date));
 
-  if (list.length === 0) return [];
+  if (list.length === 0) return ['', `${SECTION_ICONS['면회']} 면회`, '없음'];
 
-  return ['', `${SECTION_ICONS['면회']} 면회`, '', ...list.map((s) => {
+  return ['', `${SECTION_ICONS['면회']} 면회`, ...list.map((s) => {
     const d = shortDate(s.traits.visit.date);
     const hour_minute = s.traits.visit.time ? ` ${s.traits.visit.time}` : '';
-    return `${d}${hour_minute} ${s.rank} ${s.name} 면회 (${s.traits.visit.visitor}) 희망합니다.`;
+    return `${d} / ${hour_minute} / ${s.rank} ${s.name} / ${s.traits.visit.visitType} / ${s.traits.visit.visitor}`;
   })];
 }
 
 function buildHaircut(ctx: BuildCtx): string[] {
+  if(ctx.today.getDay() !== 1) return [];
+
   if (!ctx.group.civHaircut.enabled) return [];
   const members = resolve(ctx.group.civHaircut.members, ctx);
+  if(members.length == 0) return [];
   return [
     '', `${SECTION_ICONS['민간이발']} 민간이발`,
-    members.length > 0 ? `${formatMembers(members)} 희망합니다.` : '-',
+    `- 총원 ${members.length} 명`,
+    `- ${formatMembers(members)}`
   ];
 }
 
@@ -165,13 +218,14 @@ function buildMilTraining(ctx: BuildCtx): string[] {
     ? MIL_TRAININGS.filter((cat) => resolve(group.milTraining[cat], ctx).length > 0)
     : [];
 
+  if (active.length === 0) return [];
+
   const lines = ['', `${SECTION_ICONS['병기본']} 병기본`];
-  if (active.length === 0) return [...lines, '', `${room}생활관 병기본 희망자 없습니다.`];
 
   for (const cat of active) {
     const { icon, label } = MIL_CONFIG[cat];
     const members = resolve(group.milTraining[cat], ctx);
-    lines.push('', `${icon} ${label}`, `${formatMembers(members)} 희망합니다.`);
+    lines.push('', `${icon} ${label}`, `${formatMembers(members)}`);
   }
   return lines;
 }
@@ -204,18 +258,17 @@ export function buildHqMessage(msgCtx: MessageContext): string {
   return [
     ...buildHeader(ctx),
     ...buildLeave(ctx),
-    ...buildReligion(ctx),
     ...buildOutpatient(ctx),
     ...buildVisit(ctx),
+    ...buildReligion(ctx),
     ...buildHaircut(ctx),
     ...buildMilTraining(ctx),
     ...buildDelivery(ctx),
     ...buildNote(ctx),
     '',
+    '⚠️ 병력 특이사항 확인',
     '자살징후, 구타 및 가혹행위, 언어폭력 등 1번 항목 특이사항 없습니다.',
     '',
-    '분대원 면담 및 관찰 결과 특이사항 없습니다.',
-    '',
-    '그 외 특이사항 및 건의사항 없습니다.',
+    '분대원 면담 및 관찰 결과 특이사항 없습니다.'
   ].join('\n');
 }
