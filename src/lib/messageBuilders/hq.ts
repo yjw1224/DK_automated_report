@@ -117,7 +117,7 @@ function buildLeave(ctx: BuildCtx): string[] {
   } else {
     for (const { soldier, leave } of vacations) {
       lines.push(
-        `${shortDate(leave.startDate)} / ${soldier.rank} ${soldier.name} / ${shortDate(leave.endDate)}(${leave.leaveType}) / ${leave.destination}`
+        `${shortDate(leave.startDate)} / ${soldier.rank} ${soldier.name} / ${leave.leaveType} / ${leave.destination}`
       );
     }
   }
