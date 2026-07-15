@@ -117,7 +117,7 @@ function buildLeave(ctx: BuildCtx): string[] {
   } else {
     for (const { soldier, leave } of vacations) {
       lines.push(
-        `${shortDate(leave.startDate)} / ${soldier.rank} ${soldier.name} / ${leave.leaveType} / ${leave.destination}`
+        `${shortDate(leave.startDate)} - ${shortDate(leave.endDate)} / ${soldier.rank} ${soldier.name} / ${leave.leaveType} / ${leave.destination}`
       );
     }
   }
@@ -150,7 +150,7 @@ function buildLeave(ctx: BuildCtx): string[] {
 }
 
 function buildReligion(ctx: BuildCtx): string[] {
-  if(ctx.today.getDay() !== 4) return [];
+  // if(ctx.today.getDay() !== 4) return [];
 
   const lines: string[] = [];
   const active = RELIGIONS.filter((r) => resolve(ctx.group.religion[r], ctx).length > 0);
@@ -194,13 +194,13 @@ function buildVisit(ctx: BuildCtx): string[] {
 
   return ['', `${SECTION_ICONS['면회']} 면회`, ...list.map((s) => {
     const d = shortDate(s.traits.visit.date);
-    const hour_minute = s.traits.visit.time ? ` ${s.traits.visit.time}` : '';
+    const hour_minute = s.traits.visit.time ? `${s.traits.visit.time}` : '';
     return `${d} / ${hour_minute} / ${s.rank} ${s.name} / ${s.traits.visit.visitType} / ${s.traits.visit.visitor}`;
   })];
 }
 
 function buildHaircut(ctx: BuildCtx): string[] {
-  if(ctx.today.getDay() !== 1) return [];
+  // if(ctx.today.getDay() !== 1) return [];
 
   if (!ctx.group.civHaircut.enabled) return [];
   const members = resolve(ctx.group.civHaircut.members, ctx);
